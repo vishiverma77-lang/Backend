@@ -1,28 +1,54 @@
 import Product from "../models/Product.js";
 
 export const createProduct = async (req, res) => {
+  console.log("Create Product Triggered...");
+  console.log("Body Items:", Object.keys(req.body));
+  console.log("Files Count:", req.files?.length || 0);
+
   try {
     const productData = { ...req.body };
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
     arrayFields.forEach(key => {
         if (typeof productData[key] === 'string') {
-            try { productData[key] = JSON.parse(productData[key]); } catch (e) {}
+            try { 
+                productData[key] = JSON.parse(productData[key]); 
+            } catch (e) {
+                console.warn(`Failed to parse field: ${key}`, e.message);
+            }
         }
     });
 
     if (req.files && req.files.length > 0) {
-      productData.images = req.files.map(file => file.path);
+      const allPaths = req.files.map(file => file.path);
+      productData.images = allPaths; // Keep for legacy/main gallery
+
+      // Map images to colorOptions if they exist
+      if (typeof productData.colorOptions === 'string') {
+          try {
+              const parsedOptions = JSON.parse(productData.colorOptions);
+              productData.colorOptions = parsedOptions.map(opt => ({
+                  color: opt.color,
+                  images: opt.imageIndices.map(idx => allPaths[idx]).filter(path => path)
+              }));
+          } catch (e) {
+              console.error("Error parsing colorOptions:", e);
+          }
+      }
     } else {
       productData.images = [];
+      productData.colorOptions = [];
     }
 
+    console.log("Final Product Data:", productData.name);
     const product = new Product(productData);
     const saved = await product.save();
+    console.log("Product Saved Successfully!");
 
     res.status(201).json(saved);
   } catch (error) {
+    console.error("Create Product CRASH:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -85,27 +111,27 @@ export const updateProduct = async (req, res) => {
     const productData = { ...req.body };
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
     arrayFields.forEach(key => {
         if (typeof productData[key] === 'string') {
             try { productData[key] = JSON.parse(productData[key]); } catch (e) {}
         }
     });
 
-    if (req.files && req.files.length > 0) {
-      // If new images are uploaded, determine the final array
-      // Existing images might be passed in `existingImages`
+    // Handle main product images (from upload.fields - req.files.images)
+    const mainImageFiles = req.files?.images || [];
+    const colorImageFiles = req.files?.colorImages || [];
+
+    if (mainImageFiles.length > 0 || productData.existingImages) {
       let finalImages = [];
       if (typeof productData.existingImages === 'string') {
           try { finalImages = JSON.parse(productData.existingImages); } catch (e) {}
       } else if (Array.isArray(productData.existingImages)) {
           finalImages = productData.existingImages;
       }
-      
-      const newImages = req.files.map(file => file.path);
-      productData.images = [...finalImages, ...newImages];
-    } else {
-      // Only existing images preserved
+      const newMainImagePaths = mainImageFiles.map(f => f.path);
+      productData.images = [...finalImages, ...newMainImagePaths];
+    } else if (productData.existingImages) {
       if (typeof productData.existingImages === 'string') {
           try { productData.images = JSON.parse(productData.existingImages); } catch (e) { productData.images = []; }
       } else if (Array.isArray(productData.existingImages)) {
@@ -113,9 +139,32 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    // Handle colorOptionsEdit (new format from EditProduct.jsx)
+    if (productData.colorOptionsEdit) {
+      try {
+        const colorOptionsEdit = JSON.parse(productData.colorOptionsEdit);
+        const colorImagePaths = colorImageFiles.map(f => f.path);
+        
+        productData.colorOptions = colorOptionsEdit.map(opt => {
+          const newImages = opt.newFileIndices.map(idx => colorImagePaths[idx]).filter(Boolean);
+          return {
+            color: opt.color,
+            images: [...(opt.existingImages || []), ...newImages]
+          };
+        });
+      } catch (e) {
+        console.error("Error parsing colorOptionsEdit:", e);
+      }
+    }
+    // Handle legacy colorOptions format (from old routes)
+    else if (typeof productData.colorOptions === 'string') {
+        try { productData.colorOptions = JSON.parse(productData.colorOptions); } catch (e) {}
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(id, productData, { new: true });
     res.json(updatedProduct);
   } catch (error) {
+    console.error("Update Product Error:", error);
     res.status(500).json({ message: error.message });
   }
 };

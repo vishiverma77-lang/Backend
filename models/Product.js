@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const productSchema = new mongoose.Schema({
   name: String,
   price: Number,
-  pricePerPiece: Number,
-  piecesPerBox: Number,
+  pricePerSqft: Number,
+  sqftPerBox: Number,
   description: String,
   images: [String],
   category: String,
@@ -19,6 +19,10 @@ const productSchema = new mongoose.Schema({
   finishes: [String],
   effects: [String],
 
+  colorOptions: [{
+    color: String,
+    images: [String]
+  }],
   createdAt: {
     type: Date,
     default: Date.now

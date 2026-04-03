@@ -35,3 +35,34 @@ export const getOrders = async (req, res) => {
     res.status(500).json({ message: "Server error fetching orders" });
   }
 };
+
+// @desc Update order status
+// @route PUT /api/orders/:id/status
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json(order);
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).json({ message: "Server error updating status" });
+  }
+};
+
+// @desc Delete order
+// @route DELETE /api/orders/:id
+export const deleteOrder = async (req, res) => {
+  try {
+    const order = await Order.findByIdAndDelete(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    res.status(500).json({ message: "Server error deleting order" });
+  }
+};
