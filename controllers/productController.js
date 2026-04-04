@@ -20,18 +20,41 @@ export const createProduct = async (req, res) => {
         }
     });
 
-    if (req.files && req.files.length > 0) {
-      const allPaths = req.files.map(file => file.path);
-      productData.images = allPaths; // Keep for legacy/main gallery
+    const { images: mainImageFiles = [], video: videoFiles = [], colorVideos: colorVideoFiles = [], images360: images360Files = [] } = req.files || {};
+      
+    if (videoFiles && videoFiles.length > 0) {
+      productData.video = videoFiles[0].path;
+    }
 
-      // Map images to colorOptions if they exist
+    productData.images360 = images360Files.map(f => f.path);
+
+    const colorVideoPaths = colorVideoFiles.map(f => f.path);
+
+    if (mainImageFiles && mainImageFiles.length > 0) {
+      const allPaths = mainImageFiles.map(file => file.path);
+      productData.images = allPaths; // Initially assign all, will filter out variant images below
+
+      // Map images and videos to colorOptions if they exist
       if (typeof productData.colorOptions === 'string') {
           try {
               const parsedOptions = JSON.parse(productData.colorOptions);
+              const usedIndices = new Set();
               productData.colorOptions = parsedOptions.map(opt => ({
                   color: opt.color,
-                  images: opt.imageIndices.map(idx => allPaths[idx]).filter(path => path)
+                  name: opt.name,
+                  price: Number(opt.price),
+                  size: opt.size,
+                  sizes: opt.sizes || [],
+                  description: opt.description,
+                  video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
+                  images: opt.imageIndices.map(idx => {
+                      usedIndices.add(idx);
+                      return allPaths[idx];
+                  }).filter(path => path)
               }));
+              
+              // Filter out all variant images from the general product gallery
+              productData.images = allPaths.filter((_, idx) => !usedIndices.has(idx));
           } catch (e) {
               console.error("Error parsing colorOptions:", e);
           }
@@ -118,9 +141,29 @@ export const updateProduct = async (req, res) => {
         }
     });
 
-    // Handle main product images (from upload.fields - req.files.images)
-    const mainImageFiles = req.files?.images || [];
-    const colorImageFiles = req.files?.colorImages || [];
+    const { images: mainImageFiles = [], colorImages: colorImageFiles = [], video: videoFiles = [], colorVideos: colorVideoFiles = [], images360: images360Files = [] } = req.files || {};
+      
+    if (videoFiles && videoFiles.length > 0) {
+        productData.video = videoFiles[0].path;
+    } else if (req.body.keepExistingVideo === 'false') {
+        productData.video = "";
+    }
+
+    const colorVideoPaths = colorVideoFiles.map(f => f.path);
+
+    // Handle images360
+    if (images360Files.length > 0 || productData.existingImages360) {
+      let final360 = [];
+      if (typeof productData.existingImages360 === 'string') {
+          try { final360 = JSON.parse(productData.existingImages360); } catch (e) {}
+      } else if (Array.isArray(productData.existingImages360)) {
+          final360 = productData.existingImages360;
+      }
+      const new360Paths = images360Files.map(f => f.path);
+      productData.images360 = [...final360, ...new360Paths];
+    } else if (req.body.keepExisting360 === 'false') {
+      productData.images360 = [];
+    }
 
     if (mainImageFiles.length > 0 || productData.existingImages) {
       let finalImages = [];
@@ -147,8 +190,20 @@ export const updateProduct = async (req, res) => {
         
         productData.colorOptions = colorOptionsEdit.map(opt => {
           const newImages = opt.newFileIndices.map(idx => colorImagePaths[idx]).filter(Boolean);
+          let finalVideo = opt.existingVideo || "";
+          if (opt.newVideoIndex !== undefined && colorVideoPaths[opt.newVideoIndex]) {
+            finalVideo = colorVideoPaths[opt.newVideoIndex];
+          } else if (opt.keepExistingVideo === false) {
+            finalVideo = "";
+          }
+
           return {
             color: opt.color,
+            name: opt.name,
+            price: Number(opt.price),
+            sizes: opt.sizes || [],
+            description: opt.description,
+            video: finalVideo,
             images: [...(opt.existingImages || []), ...newImages]
           };
         });

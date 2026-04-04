@@ -8,6 +8,8 @@ const productSchema = new mongoose.Schema({
   description: String,
   images: [String],
   category: String,
+  video: String,
+  images360: [String],
 
   formats: [String],
   colors: [String],
@@ -21,7 +23,13 @@ const productSchema = new mongoose.Schema({
 
   colorOptions: [{
     color: String,
-    images: [String]
+    images: [String],
+    name: String,
+    price: Number,
+    size: String,
+    sizes: [String],
+    description: String,
+    video: String
   }],
   createdAt: {
     type: Date,

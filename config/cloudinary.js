@@ -13,10 +13,20 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'ceragres_products',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-    transformation: [{ width: 800, height: 800, crop: 'limit' }]
+  params: async (req, file) => {
+    if (file.mimetype.startsWith('video/')) {
+      return {
+        folder: 'ceragres_products',
+        resource_type: 'video',
+        allowed_formats: ['mp4', 'mov', 'webm', 'ogg', 'avi', 'mkv'],
+      };
+    }
+    
+    return {
+      folder: 'ceragres_products',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+      transformation: [{ width: 800, height: 800, crop: 'limit' }],
+    };
   },
 });
 
