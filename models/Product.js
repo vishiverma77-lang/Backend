@@ -8,6 +8,7 @@ const productSchema = new mongoose.Schema({
   description: String,
   images: [String],
   category: String,
+  series: String,
   video: String,
   images360: [String],
 

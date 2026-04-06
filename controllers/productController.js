@@ -3,7 +3,7 @@ import Product from "../models/Product.js";
 export const createProduct = async (req, res) => {
   console.log("Create Product Triggered...");
   console.log("Body Items:", Object.keys(req.body));
-  console.log("Files Count:", req.files?.length || 0);
+  console.log("Files received:", Object.keys(req.files || {}));
 
   try {
     const productData = { ...req.body };
@@ -20,7 +20,14 @@ export const createProduct = async (req, res) => {
         }
     });
 
-    const { images: mainImageFiles = [], video: videoFiles = [], colorVideos: colorVideoFiles = [], images360: images360Files = [] } = req.files || {};
+    // ✅ FIXED: Extract ALL file groups, including colorImages
+    const { 
+      images: mainImageFiles = [], 
+      video: videoFiles = [], 
+      colorImages: colorImageFiles = [],
+      colorVideos: colorVideoFiles = [], 
+      images360: images360Files = [] 
+    } = req.files || {};
       
     if (videoFiles && videoFiles.length > 0) {
       productData.video = videoFiles[0].path;
@@ -28,40 +35,32 @@ export const createProduct = async (req, res) => {
 
     productData.images360 = images360Files.map(f => f.path);
 
+    // Main product images
+    productData.images = mainImageFiles.map(f => f.path);
+
+    // Color variation image and video paths (separate from main images)
+    const colorImagePaths = colorImageFiles.map(f => f.path);
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
 
-    if (mainImageFiles && mainImageFiles.length > 0) {
-      const allPaths = mainImageFiles.map(file => file.path);
-      productData.images = allPaths; // Initially assign all, will filter out variant images below
-
-      // Map images and videos to colorOptions if they exist
-      if (typeof productData.colorOptions === 'string') {
-          try {
-              const parsedOptions = JSON.parse(productData.colorOptions);
-              const usedIndices = new Set();
-              productData.colorOptions = parsedOptions.map(opt => ({
-                  color: opt.color,
-                  name: opt.name,
-                  price: Number(opt.price),
-                  size: opt.size,
-                  sizes: opt.sizes || [],
-                  description: opt.description,
-                  video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
-                  images: opt.imageIndices.map(idx => {
-                      usedIndices.add(idx);
-                      return allPaths[idx];
-                  }).filter(path => path)
-              }));
-              
-              // Filter out all variant images from the general product gallery
-              productData.images = allPaths.filter((_, idx) => !usedIndices.has(idx));
-          } catch (e) {
-              console.error("Error parsing colorOptions:", e);
-          }
-      }
-    } else {
-      productData.images = [];
-      productData.colorOptions = [];
+    // ✅ FIXED: Map colorOptions independently, not inside the main images block
+    if (typeof productData.colorOptions === 'string') {
+        try {
+            const parsedOptions = JSON.parse(productData.colorOptions);
+            productData.colorOptions = parsedOptions.map(opt => ({
+                color: opt.color,
+                name: opt.name,
+                price: Number(opt.price),
+                size: opt.size,
+                sizes: opt.sizes || [],
+                description: opt.description,
+                video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
+                images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path)
+            }));
+            console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, imgCount: o.images.length })));
+        } catch (e) {
+            console.error("Error parsing colorOptions:", e);
+            productData.colorOptions = [];
+        }
     }
 
     console.log("Final Product Data:", productData.name);
@@ -79,8 +78,8 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const filter = {};
-    const { effect, format, color, style, material, size, look, finish, search } = req.query;
-
+    const { effect, format, color, style, material, size, look, finish, search, series } = req.query;
+    if (series) filter.series = series;
     if (effect) filter.effects = effect;
     if (format) filter.formats = format;
     if (color) filter.colors = color;
@@ -96,6 +95,7 @@ export const getProducts = async (req, res) => {
       filter.$or = [
         { name: searchRegex },
         { description: searchRegex },
+        { series: searchRegex },
         { category: searchRegex },
         { tileUses: searchRegex },
         { effects: searchRegex },
