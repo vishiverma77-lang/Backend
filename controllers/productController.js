@@ -48,8 +48,11 @@ export const createProduct = async (req, res) => {
             const parsedOptions = JSON.parse(productData.colorOptions);
             productData.colorOptions = parsedOptions.map(opt => ({
                 color: opt.color,
+                colors: opt.colors || [],
                 name: opt.name,
                 price: Number(opt.price),
+                pricePerSqft: Number(opt.pricePerSqft),
+                sqftPerBox: Number(opt.sqftPerBox),
                 size: opt.size,
                 sizes: opt.sizes || [],
                 description: opt.description,
@@ -199,8 +202,11 @@ export const updateProduct = async (req, res) => {
 
           return {
             color: opt.color,
+            colors: opt.colors || [],
             name: opt.name,
             price: Number(opt.price),
+            pricePerSqft: Number(opt.pricePerSqft),
+            sqftPerBox: Number(opt.sqftPerBox),
             sizes: opt.sizes || [],
             description: opt.description,
             video: finalVideo,
