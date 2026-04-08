@@ -27,6 +27,7 @@ const productSchema = new mongoose.Schema({
     colors: [String],
     images: [String],
     name: String,
+    productName: String,
     price: Number,
     pricePerSqft: Number,
     sqftPerBox: Number,

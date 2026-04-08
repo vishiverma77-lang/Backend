@@ -50,6 +50,7 @@ export const createProduct = async (req, res) => {
                 color: opt.color,
                 colors: opt.colors || [],
                 name: opt.name,
+                productName: opt.productName || "",
                 price: Number(opt.price),
                 pricePerSqft: Number(opt.pricePerSqft),
                 sqftPerBox: Number(opt.sqftPerBox),
@@ -204,6 +205,7 @@ export const updateProduct = async (req, res) => {
             color: opt.color,
             colors: opt.colors || [],
             name: opt.name,
+            productName: opt.productName || "",
             price: Number(opt.price),
             pricePerSqft: Number(opt.pricePerSqft),
             sqftPerBox: Number(opt.sqftPerBox),
@@ -222,7 +224,15 @@ export const updateProduct = async (req, res) => {
         try { productData.colorOptions = JSON.parse(productData.colorOptions); } catch (e) {}
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, productData, { new: true });
+    // Ensure Mongoose knows colorOptions is modified
+    const productToUpdate = await Product.findById(id);
+    if (!productToUpdate) return res.status(404).json({ message: "Product not found" });
+
+    // Update fields
+    Object.assign(productToUpdate, productData);
+    productToUpdate.markModified('colorOptions');
+    
+    const updatedProduct = await productToUpdate.save();
     res.json(updatedProduct);
   } catch (error) {
     console.error("Update Product Error:", error);
