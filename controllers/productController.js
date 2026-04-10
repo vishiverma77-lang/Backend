@@ -25,6 +25,7 @@ export const createProduct = async (req, res) => {
       images: mainImageFiles = [], 
       video: videoFiles = [], 
       colorImages: colorImageFiles = [],
+      colorThumbnails: colorThumbnailFiles = [],
       colorVideos: colorVideoFiles = [], 
       images360: images360Files = [] 
     } = req.files || {};
@@ -41,6 +42,7 @@ export const createProduct = async (req, res) => {
     // Color variation image and video paths (separate from main images)
     const colorImagePaths = colorImageFiles.map(f => f.path);
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
+    const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
 
     // ✅ FIXED: Map colorOptions independently, not inside the main images block
     if (typeof productData.colorOptions === 'string') {
@@ -58,6 +60,7 @@ export const createProduct = async (req, res) => {
                 sizes: opt.sizes || [],
                 description: opt.description,
                 video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
+                thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
                 images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path)
             }));
             console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, imgCount: o.images.length })));
@@ -74,7 +77,7 @@ export const createProduct = async (req, res) => {
 
     res.status(201).json(saved);
   } catch (error) {
-    console.error("Create Product CRASH:", error);
+    console.error("Create Product Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -145,7 +148,14 @@ export const updateProduct = async (req, res) => {
         }
     });
 
-    const { images: mainImageFiles = [], colorImages: colorImageFiles = [], video: videoFiles = [], colorVideos: colorVideoFiles = [], images360: images360Files = [] } = req.files || {};
+    const { 
+      images: mainImageFiles = [], 
+      colorImages: colorImageFiles = [], 
+      colorThumbnails: colorThumbnailFiles = [],
+      video: videoFiles = [], 
+      colorVideos: colorVideoFiles = [], 
+      images360: images360Files = [] 
+    } = req.files || {};
       
     if (videoFiles && videoFiles.length > 0) {
         productData.video = videoFiles[0].path;
@@ -154,6 +164,7 @@ export const updateProduct = async (req, res) => {
     }
 
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
+    const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
 
     // Handle images360
     if (images360Files.length > 0 || productData.existingImages360) {
@@ -211,6 +222,7 @@ export const updateProduct = async (req, res) => {
             sqftPerBox: Number(opt.sqftPerBox),
             sizes: opt.sizes || [],
             description: opt.description,
+            thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
             video: finalVideo,
             images: [...(opt.existingImages || []), ...newImages]
           };

@@ -34,7 +34,8 @@ const productSchema = new mongoose.Schema({
     size: String,
     sizes: [String],
     description: String,
-    video: String
+    video: String,
+    thumbnail: String
   }],
   createdAt: {
     type: Date,
