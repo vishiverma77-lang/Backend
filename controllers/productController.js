@@ -27,7 +27,8 @@ export const createProduct = async (req, res) => {
       colorImages: colorImageFiles = [],
       colorThumbnails: colorThumbnailFiles = [],
       colorVideos: colorVideoFiles = [], 
-      images360: images360Files = [] 
+      images360: images360Files = [],
+      colorImages360: colorImages360Files = []
     } = req.files || {};
       
     if (videoFiles && videoFiles.length > 0) {
@@ -43,6 +44,7 @@ export const createProduct = async (req, res) => {
     const colorImagePaths = colorImageFiles.map(f => f.path);
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
+    const colorImages360Paths = colorImages360Files.map(f => f.path);
 
     // ✅ FIXED: Map colorOptions independently, not inside the main images block
     if (typeof productData.colorOptions === 'string') {
@@ -61,9 +63,10 @@ export const createProduct = async (req, res) => {
                 description: opt.description,
                 video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
                 thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
-                images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path)
+                images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path),
+                images360: (opt.images360Indices || []).map(idx => colorImages360Paths[idx]).filter(path => path)
             }));
-            console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, imgCount: o.images.length })));
+            console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, imgCount: o.images.length, img360Count: o.images360.length })));
         } catch (e) {
             console.error("Error parsing colorOptions:", e);
             productData.colorOptions = [];
@@ -154,7 +157,8 @@ export const updateProduct = async (req, res) => {
       colorThumbnails: colorThumbnailFiles = [],
       video: videoFiles = [], 
       colorVideos: colorVideoFiles = [], 
-      images360: images360Files = [] 
+      images360: images360Files = [],
+      colorImages360: colorImages360Files = []
     } = req.files || {};
       
     if (videoFiles && videoFiles.length > 0) {
@@ -165,6 +169,7 @@ export const updateProduct = async (req, res) => {
 
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
+    const colorImages360Paths = colorImages360Files.map(f => f.path);
 
     // Handle images360
     if (images360Files.length > 0 || productData.existingImages360) {
@@ -224,7 +229,8 @@ export const updateProduct = async (req, res) => {
             description: opt.description,
             thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
             video: finalVideo,
-            images: [...(opt.existingImages || []), ...newImages]
+            images: [...(opt.existingImages || []), ...newImages],
+            images360: [...(opt.existingImages360 || []), ...((opt.newImages360Indices || []).map(idx => colorImages360Paths[idx]).filter(Boolean))]
           };
         });
       } catch (e) {

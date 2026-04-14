@@ -19,7 +19,8 @@ router.post("/", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
-  { name: "images360", maxCount: 36 }
+  { name: "images360", maxCount: 36 },
+  { name: "colorImages360", maxCount: 150 }
 ]), createProduct);
 router.put("/:id", upload.fields([
   { name: "images", maxCount: 30 },
@@ -27,7 +28,8 @@ router.put("/:id", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
-  { name: "images360", maxCount: 36 }
+  { name: "images360", maxCount: 36 },
+  { name: "colorImages360", maxCount: 150 }
 ]), updateProduct);
 router.delete("/:id", deleteProduct);
 
