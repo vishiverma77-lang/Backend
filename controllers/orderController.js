@@ -10,11 +10,17 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "No items in order" });
     }
 
-    const order = new Order({
+    const orderPayload = {
       customer,
       items,
       totalAmount,
-    });
+    };
+    
+    if (req.body.userId) {
+       orderPayload.userId = req.body.userId;
+    }
+
+    const order = new Order(orderPayload);
 
     const createdOrder = await order.save();
     res.status(201).json(createdOrder);
@@ -40,10 +46,17 @@ export const getOrders = async (req, res) => {
 // @route PUT /api/orders/:id/status
 export const updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, adminNote } = req.body;
+    
+    // Build update object dynamically
+    const updateFields = { status };
+    if (adminNote !== undefined) {
+      updateFields.adminNote = adminNote;
+    }
+
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateFields,
       { new: true }
     );
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -64,5 +77,19 @@ export const deleteOrder = async (req, res) => {
   } catch (error) {
     console.error("Error deleting order:", error);
     res.status(500).json({ message: "Server error deleting order" });
+  }
+};
+
+// @desc Get orders for logged in user
+// @route GET /api/orders/my-orders
+export const getMyOrders = async (req, res) => {
+  try {
+    // SECURITY: Only fetch orders linked to this specific user's ID
+    // Never use phone number matching as it could expose other users' orders
+    const orders = await Order.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({ message: "Server error fetching user orders" });
   }
 };

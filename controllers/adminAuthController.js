@@ -21,7 +21,7 @@ export const login = async (req, res) => {
         // 3. Generate JWT Token
         const token = jwt.sign(
             { id: admin._id, role: admin.role },
-            process.env.JWT_SECRET || 'rairoshan_admin_secret_key_2024',
+            process.env.JWT_SECRET_ADMIN || 'rairoshan_admin_secret_key_2024',
             { expiresIn: '1d' } // Session valid for 1 day
         );
 
