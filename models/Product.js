@@ -2,9 +2,11 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema({
   name: String,
+  sku: String,
   price: Number,
   pricePerSqft: Number,
   sqftPerBox: Number,
+  pricingUnit: { type: String, enum: ["Box", "Sheet"], default: "Box" },
   description: String,
   images: [String],
   category: String,
@@ -23,6 +25,7 @@ const productSchema = new mongoose.Schema({
   effects: [String],
 
   colorOptions: [{
+    sku: String,
     color: String,
     colors: [String],
     images: [String],
@@ -31,6 +34,7 @@ const productSchema = new mongoose.Schema({
     price: Number,
     pricePerSqft: Number,
     sqftPerBox: Number,
+    pricingUnit: { type: String, enum: ["Box", "Sheet"], default: "Box" },
     size: String,
     sizes: [String],
     description: String,

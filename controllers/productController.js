@@ -8,6 +8,12 @@ export const createProduct = async (req, res) => {
   try {
     const productData = { ...req.body };
     
+    // Normalize pricingUnit to match Mongoose enum (Capitalized)
+    if (productData.pricingUnit) {
+      const unit = productData.pricingUnit.toLowerCase();
+      productData.pricingUnit = unit.charAt(0).toUpperCase() + unit.slice(1); // "sheet" -> "Sheet"
+    }
+
     // Parse arrays that were stringified via FormData
     const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
     arrayFields.forEach(key => {
@@ -52,12 +58,14 @@ export const createProduct = async (req, res) => {
             const parsedOptions = JSON.parse(productData.colorOptions);
             productData.colorOptions = parsedOptions.map(opt => ({
                 color: opt.color,
+                sku: opt.sku,
                 colors: opt.colors || [],
                 name: opt.name,
                 productName: opt.productName || "",
                 price: Number(opt.price),
                 pricePerSqft: Number(opt.pricePerSqft),
                 sqftPerBox: Number(opt.sqftPerBox),
+                pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
                 size: opt.size,
                 sizes: opt.sizes || [],
                 description: opt.description,
@@ -143,6 +151,12 @@ export const updateProduct = async (req, res) => {
     const { id } = req.params;
     const productData = { ...req.body };
     
+    // Normalize pricingUnit to match Mongoose enum (Capitalized)
+    if (productData.pricingUnit) {
+      const unit = productData.pricingUnit.toLowerCase();
+      productData.pricingUnit = unit.charAt(0).toUpperCase() + unit.slice(1); // "sheet" -> "Sheet"
+    }
+    
     // Parse arrays that were stringified via FormData
     const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
     arrayFields.forEach(key => {
@@ -219,12 +233,14 @@ export const updateProduct = async (req, res) => {
 
           return {
             color: opt.color,
+            sku: opt.sku,
             colors: opt.colors || [],
             name: opt.name,
             productName: opt.productName || "",
             price: Number(opt.price),
             pricePerSqft: Number(opt.pricePerSqft),
             sqftPerBox: Number(opt.sqftPerBox),
+            pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
             sizes: opt.sizes || [],
             description: opt.description,
             thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
