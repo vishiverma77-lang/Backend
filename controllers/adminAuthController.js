@@ -11,7 +11,13 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+// Verify email configuration on startup/startup-like behavior
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("WARNING: EMAIL_USER or EMAIL_PASS environment variables are missing!");
+}
+
 // 1. Initial Login - Verify Email & Send OTP
+
 export const login = async (req, res) => {
     try {
         const { email } = req.body;
