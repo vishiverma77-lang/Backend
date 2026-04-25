@@ -15,8 +15,9 @@ export const createProduct = async (req, res) => {
     }
 
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
     arrayFields.forEach(key => {
+
         if (typeof productData[key] === 'string') {
             try { 
                 productData[key] = JSON.parse(productData[key]); 
@@ -34,8 +35,10 @@ export const createProduct = async (req, res) => {
       colorThumbnails: colorThumbnailFiles = [],
       colorVideos: colorVideoFiles = [], 
       images360: images360Files = [],
-      colorImages360: colorImages360Files = []
+      colorImages360: colorImages360Files = [],
+      variationColorImages: variationColorImageFiles = []
     } = req.files || {};
+
       
     if (videoFiles && videoFiles.length > 0) {
       productData.video = videoFiles[0].path;
@@ -51,6 +54,8 @@ export const createProduct = async (req, res) => {
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
     const colorImages360Paths = colorImages360Files.map(f => f.path);
+    const variationColorImagePaths = variationColorImageFiles.map(f => f.path);
+
 
     // ✅ FIXED: Map colorOptions independently, not inside the main images block
     if (typeof productData.colorOptions === 'string') {
@@ -79,6 +84,21 @@ export const createProduct = async (req, res) => {
             console.error("Error parsing colorOptions:", e);
             productData.colorOptions = [];
         }
+    
+    // Map variationColorImages to variationColors array using variationColorIndices
+    if (Array.isArray(productData.variationColors)) {
+        try {
+            const indices = JSON.parse(productData.variationColorIndices || "[]");
+            productData.variationColors = productData.variationColors.map((colorName, idx) => {
+                const uIdx = indices[idx];
+                const imgPath = (uIdx !== null && uIdx !== undefined) ? variationColorImagePaths[uIdx] : "";
+                return { name: colorName, image: imgPath };
+            });
+        } catch (e) {
+            console.error("Error mapping variationColors in create:", e);
+        }
+    }
+
     }
 
     console.log("Final Product Data:", productData.name);
@@ -158,8 +178,9 @@ export const updateProduct = async (req, res) => {
     }
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
     arrayFields.forEach(key => {
+
         if (typeof productData[key] === 'string') {
             try { productData[key] = JSON.parse(productData[key]); } catch (e) {}
         }
@@ -253,20 +274,45 @@ export const updateProduct = async (req, res) => {
         console.error("Error parsing colorOptionsEdit:", e);
       }
     }
+
+    // Handle variationColors update in updateProduct
+    if (productData.variationColors) {
+        try {
+            const names = typeof productData.variationColors === 'string' ? JSON.parse(productData.variationColors) : productData.variationColors;
+            const existingImages = JSON.parse(productData.existingVariationColorImages || "[]");
+            const uploadIndices = JSON.parse(productData.variationColorIndices || "[]");
+            const newImagePaths = variationColorImageFiles.map(f => f.path);
+
+
+            productData.variationColors = names.map((name, idx) => {
+                let img = existingImages[idx] || "";
+                const uIdx = uploadIndices[idx];
+                if (uIdx !== null && uIdx !== undefined && newImagePaths[uIdx]) {
+                    img = newImagePaths[uIdx];
+                }
+                return { name, image: img };
+            });
+        } catch (e) {
+            console.error("Error updating variationColors:", e);
+        }
+    }
+
     // Handle legacy colorOptions format (from old routes)
     else if (typeof productData.colorOptions === 'string') {
         try { productData.colorOptions = JSON.parse(productData.colorOptions); } catch (e) {}
     }
 
-    // Ensure Mongoose knows colorOptions is modified
+    // Ensure Mongoose knows colorOptions and variationColors are modified
     const productToUpdate = await Product.findById(id);
     if (!productToUpdate) return res.status(404).json({ message: "Product not found" });
 
     // Update fields
     Object.assign(productToUpdate, productData);
     productToUpdate.markModified('colorOptions');
+    productToUpdate.markModified('variationColors');
     
     const updatedProduct = await productToUpdate.save();
+
     res.json(updatedProduct);
   } catch (error) {
     console.error("Update Product Error:", error);

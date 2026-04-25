@@ -23,6 +23,10 @@ const productSchema = new mongoose.Schema({
   looks: [String],
   finishes: [String],
   effects: [String],
+  variationColors: [{
+    name: String,
+    image: String
+  }],
 
   colorOptions: [{
     sku: String,

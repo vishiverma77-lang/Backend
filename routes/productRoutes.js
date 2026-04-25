@@ -20,8 +20,10 @@ router.post("/", upload.fields([
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
   { name: "images360", maxCount: 36 },
-  { name: "colorImages360", maxCount: 150 }
+  { name: "colorImages360", maxCount: 150 },
+  { name: "variationColorImages", maxCount: 20 }
 ]), createProduct);
+
 router.put("/:id", upload.fields([
   { name: "images", maxCount: 30 },
   { name: "colorImages", maxCount: 60 },
@@ -29,8 +31,10 @@ router.put("/:id", upload.fields([
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
   { name: "images360", maxCount: 36 },
-  { name: "colorImages360", maxCount: 150 }
+  { name: "colorImages360", maxCount: 150 },
+  { name: "variationColorImages", maxCount: 20 }
 ]), updateProduct);
+
 router.delete("/:id", deleteProduct);
 
 export default router;
