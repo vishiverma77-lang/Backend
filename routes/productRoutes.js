@@ -12,6 +12,7 @@ const router = express.Router();
 
 // All product routes - open for admin dashboard use
 router.get("/", getProducts);
+router.get("/all", getProducts);
 router.get("/:id", getProductById);
 router.post("/", upload.fields([
   { name: "images", maxCount: 30 },

@@ -148,6 +148,11 @@ export const getProducts = async (req, res) => {
     }
 
     const products = await Product.find(filter);
+    console.log(`Found ${products.length} products for filter:`, filter);
+    if (products.length > 0) {
+      console.log("Product names:", products.map(p => p.name).join(", "));
+      console.log("Product series:", products.map(p => p.series).join(", "));
+    }
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -160,8 +165,69 @@ export const getProductById = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // If it's part of a series, fetch all siblings to merge variations and sizes
+    if (product.series) {
+      const seriesName = product.series.trim();
+      // Escape special characters so regex doesn't crash
+      const escapedSeriesName = seriesName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Find all products in the same series (case-insensitive)
+      const siblings = await Product.find({ 
+        series: { $regex: new RegExp(`^${escapedSeriesName}$`, 'i') },
+        _id: { $ne: product._id }
+      });
+
+      if (siblings.length > 0) {
+        const mergedProduct = product.toObject();
+        
+        // Initialize merged arrays with original product data, marking them with parentId
+        const allColorOptions = (mergedProduct.colorOptions || []).map(opt => ({
+          ...opt,
+          parentId: product._id
+        }));
+        
+        const allSizes = new Set(product.sizes || []);
+        const allVariationColors = [...(product.variationColors || [])];
+
+        // Merge from siblings
+        siblings.forEach(sib => {
+          // Merge colorOptions
+          if (sib.colorOptions) {
+            sib.colorOptions.forEach(opt => {
+              // Avoid duplicates by SKU if needed, but for now just merge
+              allColorOptions.push({
+                ...opt.toObject(),
+                parentId: sib._id
+              });
+            });
+          }
+          
+          // Merge sizes
+          if (sib.sizes) {
+            sib.sizes.forEach(s => allSizes.add(s));
+          }
+          
+          // Merge variationColors (the swatch icons)
+          if (sib.variationColors) {
+            sib.variationColors.forEach(vc => {
+              if (!allVariationColors.find(existing => existing.name === vc.name)) {
+                allVariationColors.push(vc.toObject());
+              }
+            });
+          }
+        });
+
+        mergedProduct.colorOptions = allColorOptions;
+        mergedProduct.sizes = Array.from(allSizes);
+        mergedProduct.variationColors = allVariationColors;
+
+        return res.json(mergedProduct);
+      }
+    }
+
     res.json(product);
   } catch (error) {
+    console.error("Get Product By ID Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -193,7 +259,8 @@ export const updateProduct = async (req, res) => {
       video: videoFiles = [], 
       colorVideos: colorVideoFiles = [], 
       images360: images360Files = [],
-      colorImages360: colorImages360Files = []
+      colorImages360: colorImages360Files = [],
+      variationColorImages: variationColorImageFiles = []
     } = req.files || {};
       
     if (videoFiles && videoFiles.length > 0) {
