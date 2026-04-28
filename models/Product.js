@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema({
   price: Number,
   pricePerSqft: Number,
   sqftPerBox: Number,
+  piecesPerBox: Number,
   pricingUnit: { type: String, enum: ["Box", "Sheet"], default: "Box" },
   description: String,
   images: [String],
@@ -13,6 +14,10 @@ const productSchema = new mongoose.Schema({
   series: String,
   video: String,
   images360: [String],
+  brand: String,
+  rating: { type: Number, default: 5.0 },
+  reviews: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
 
   formats: [String],
   colors: [String],
