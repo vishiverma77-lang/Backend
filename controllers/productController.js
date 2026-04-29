@@ -148,12 +148,37 @@ export const getProducts = async (req, res) => {
     }
 
     const products = await Product.find(filter);
-    console.log(`Found ${products.length} products for filter:`, filter);
-    if (products.length > 0) {
-      console.log("Product names:", products.map(p => p.name).join(", "));
-      console.log("Product series:", products.map(p => p.series).join(", "));
+    
+    // Add fallback to first variation if main visual/description is missing
+    const formattedProducts = products.map(p => {
+      const prod = p.toObject();
+      if ((!prod.images || prod.images.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+        prod.images = prod.colorOptions[0].images || [];
+      }
+      if (!prod.description && prod.colorOptions && prod.colorOptions.length > 0) {
+        prod.description = prod.colorOptions[0].description || "";
+      }
+      if (!prod.video && prod.colorOptions && prod.colorOptions.length > 0) {
+        prod.video = prod.colorOptions[0].video || "";
+      }
+      if ((!prod.images360 || prod.images360.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+        prod.images360 = prod.colorOptions[0].images360 || [];
+      }
+      if ((!prod.price || prod.price === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+        prod.price = prod.colorOptions[0].price || 0;
+        prod.pricingUnit = prod.colorOptions[0].pricingUnit || "Box";
+        prod.pricePerSqft = prod.colorOptions[0].pricePerSqft || 0;
+        prod.sqftPerBox = prod.colorOptions[0].sqftPerBox || 0;
+      }
+      return prod;
+    });
+
+    console.log(`Found ${formattedProducts.length} products for filter:`, filter);
+    if (formattedProducts.length > 0) {
+      console.log("Product names:", formattedProducts.map(p => p.name).join(", "));
+      console.log("Product series:", formattedProducts.map(p => p.series).join(", "));
     }
-    res.json(products);
+    res.json(formattedProducts);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -221,11 +246,50 @@ export const getProductById = async (req, res) => {
         mergedProduct.sizes = Array.from(allSizes);
         mergedProduct.variationColors = allVariationColors;
 
+        if ((!mergedProduct.images || mergedProduct.images.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+          mergedProduct.images = mergedProduct.colorOptions[0].images || [];
+        }
+        if (!mergedProduct.description && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+          mergedProduct.description = mergedProduct.colorOptions[0].description || "";
+        }
+        if (!mergedProduct.video && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+          mergedProduct.video = mergedProduct.colorOptions[0].video || "";
+        }
+        if ((!mergedProduct.images360 || mergedProduct.images360.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+          mergedProduct.images360 = mergedProduct.colorOptions[0].images360 || [];
+        }
+        if ((!mergedProduct.price || mergedProduct.price === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+          mergedProduct.price = mergedProduct.colorOptions[0].price || 0;
+          mergedProduct.pricingUnit = mergedProduct.colorOptions[0].pricingUnit || "Box";
+          mergedProduct.pricePerSqft = mergedProduct.colorOptions[0].pricePerSqft || 0;
+          mergedProduct.sqftPerBox = mergedProduct.colorOptions[0].sqftPerBox || 0;
+        }
+
         return res.json(mergedProduct);
       }
     }
 
-    res.json(product);
+    const mergedProduct = product.toObject();
+    if ((!mergedProduct.images || mergedProduct.images.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+      mergedProduct.images = mergedProduct.colorOptions[0].images || [];
+    }
+    if (!mergedProduct.description && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+      mergedProduct.description = mergedProduct.colorOptions[0].description || "";
+    }
+    if (!mergedProduct.video && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+      mergedProduct.video = mergedProduct.colorOptions[0].video || "";
+    }
+    if ((!mergedProduct.images360 || mergedProduct.images360.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+      mergedProduct.images360 = mergedProduct.colorOptions[0].images360 || [];
+    }
+    if ((!mergedProduct.price || mergedProduct.price === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
+      mergedProduct.price = mergedProduct.colorOptions[0].price || 0;
+      mergedProduct.pricingUnit = mergedProduct.colorOptions[0].pricingUnit || "Box";
+      mergedProduct.pricePerSqft = mergedProduct.colorOptions[0].pricePerSqft || 0;
+      mergedProduct.sqftPerBox = mergedProduct.colorOptions[0].sqftPerBox || 0;
+    }
+
+    res.json(mergedProduct);
   } catch (error) {
     console.error("Get Product By ID Error:", error);
     res.status(500).json({ message: error.message });
