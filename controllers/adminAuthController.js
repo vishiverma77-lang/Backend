@@ -1,106 +1,24 @@
 import Admin from "../models/Admin.js";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 
-// Configure Nodemailer
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-// Verify email configuration on startup/startup-like behavior
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("WARNING: EMAIL_USER or EMAIL_PASS environment variables are missing!");
-}
-
-// 1. Initial Login - Verify Email & Send OTP
-
+// 1. Initial Login - Verify Email & Password
 export const login = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, password } = req.body;
 
         // Restriction: Only vishiverma77@gmail.com is allowed as Admin
         if (email !== "vishiverma77@gmail.com") {
             return res.status(403).json({ message: "You are not accessible." });
         }
 
+        if (password !== "vishiverma77@") {
+            return res.status(401).json({ message: "Invalid password." });
+        }
+
         const admin = await Admin.findOne({ email });
         if (!admin) {
-            // Even if the record doesn't exist, for specific restricted emails, we might want to fail gracefully
-            // but here we know the record exists due to seeding.
             return res.status(401).json({ message: "Admin account not found." });
         }
-
-
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
-
-        // Save OTP to Admin record
-        admin.otp = otp;
-        admin.otpExpires = otpExpires;
-        await admin.save();
-
-        // Send Email
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: "vishiverma77@gmail.com",
-            subject: "Admin Access Verification Code",
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-                    <h2 style="color: #2563eb; text-align: center;">Verification Code</h2>
-                    <p>Hello Admin,</p>
-                    <p>Your 6-digit verification code to access the Admin Panel is:</p>
-                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827; margin: 20px 0;">
-                        ${otp}
-                    </div>
-                    <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
-                </div>
-            `,
-        };
-
-        // Send OTP via Email
-        await transporter.sendMail(mailOptions);
-
-        res.json({ success: true, message: "Verification code sent to your email." });
-
-
-
-
-
-    } catch (error) {
-        console.error("DEBUG - Login Error Detail:", {
-            message: error.message,
-            stack: error.stack,
-            code: error.code, // Useful for Nodemailer errors
-            command: error.command
-        });
-        res.status(500).json({ 
-            message: "Server error during login.", 
-            error: error.message // Temporarily expose error for user to see
-        });
-    }
-};
-
-
-// 2. Verify OTP & Issue Token
-export const verifyOtp = async (req, res) => {
-    try {
-        const { email, otp } = req.body;
-
-        const admin = await Admin.findOne({ email });
-
-        if (!admin || admin.otp !== otp || new Date() > admin.otpExpires) {
-            return res.status(401).json({ message: "Invalid or expired verification code." });
-        }
-
-        // Clear OTP fields after successful verification
-        admin.otp = null;
-        admin.otpExpires = null;
-        await admin.save();
 
         // Generate JWT Token
         const token = jwt.sign(
@@ -110,6 +28,7 @@ export const verifyOtp = async (req, res) => {
         );
 
         res.json({
+            success: true,
             token,
             admin: {
                 id: admin._id,
@@ -119,9 +38,15 @@ export const verifyOtp = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("OTP Verification Error:", error);
-        res.status(500).json({ message: "Server error during verification." });
+        console.error("Login Error:", error);
+        res.status(500).json({ message: "Server error during login." });
     }
+};
+
+
+// 2. Verify OTP - Disabled
+export const verifyOtp = async (req, res) => {
+    res.status(400).json({ message: "OTP verification is disabled. Please use password login." });
 };
 
 export const checkAuth = async (req, res) => {
