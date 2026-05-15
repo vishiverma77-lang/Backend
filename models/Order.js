@@ -22,6 +22,7 @@ const orderSchema = new mongoose.Schema(
         selectedColor: { type: String },
         quantity: { type: Number, required: true },
         pricePerBox: { type: Number, required: true },
+        isSample: { type: Boolean, default: false },
       },
     ],
     totalAmount: { type: Number, required: true },
