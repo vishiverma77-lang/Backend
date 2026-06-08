@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import Attribute from "../models/Attribute.js";
 
 export const createProduct = async (req, res) => {
   console.log("Create Product Triggered...");
@@ -15,7 +16,7 @@ export const createProduct = async (req, res) => {
     }
 
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
+    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -65,6 +66,8 @@ export const createProduct = async (req, res) => {
                 color: opt.color,
                 sku: opt.sku,
                 colors: opt.colors || [],
+                shapes: opt.shapes || [],
+                shape: opt.shape || "",
                 name: opt.name,
                 productName: opt.productName || "",
                 price: Number(opt.price),
@@ -79,7 +82,20 @@ export const createProduct = async (req, res) => {
                 images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path),
                 images360: (opt.images360Indices || []).map(idx => colorImages360Paths[idx]).filter(path => path)
             }));
-            console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, imgCount: o.images.length, img360Count: o.images360.length })));
+
+            // Auto-aggregate colors and shapes from variations to root level for filtering
+            const allOptColors = new Set(productData.colors || []);
+            const allOptShapes = new Set(productData.shapes || []);
+            productData.colorOptions.forEach(opt => {
+                if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
+                if (opt.color) allOptColors.add(opt.color);
+                if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
+                if (opt.shape) allOptShapes.add(opt.shape);
+            });
+            productData.colors = Array.from(allOptColors);
+            productData.shapes = Array.from(allOptShapes);
+
+            console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, shapes: o.shapes, imgCount: o.images.length, img360Count: o.images360.length })));
         } catch (e) {
             console.error("Error parsing colorOptions:", e);
             productData.colorOptions = [];
@@ -116,11 +132,12 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const filter = {};
-    const { effect, format, color, style, material, size, look, finish, search, series } = req.query;
+    const { effect, format, color, shape, style, material, size, look, finish, search, series } = req.query;
     if (series) filter.series = series;
     if (effect) filter.effects = effect;
     if (format) filter.formats = format;
     if (color) filter.colors = color;
+    if (shape) filter.shapes = shape;
     if (style) filter.styles = style;
     if (material) filter.materials = material;
     if (size) filter.sizes = size;
@@ -129,22 +146,47 @@ export const getProducts = async (req, res) => {
 
     // Unified search for all tags, uses, category, description and name
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      filter.$or = [
-        { name: searchRegex },
-        { description: searchRegex },
-        { series: searchRegex },
-        { category: searchRegex },
-        { tileUses: searchRegex },
-        { effects: searchRegex },
-        { formats: searchRegex },
-        { colors: searchRegex },
-        { styles: searchRegex },
-        { materials: searchRegex },
-        { sizes: searchRegex },
-        { looks: searchRegex },
-        { finishes: searchRegex }
-      ];
+      const searchLower = search.trim().toLowerCase();
+      
+      // Fetch dynamic colors and shapes lists from Attribute model
+      const colorsAttribute = await Attribute.findOne({ name: "colors" });
+      const shapesAttribute = await Attribute.findOne({ name: "shapes" });
+      const colorsList = colorsAttribute ? colorsAttribute.values : [];
+      const shapesList = shapesAttribute ? shapesAttribute.values : [];
+      
+      const matchedColor = colorsList.find(c => c.toLowerCase() === searchLower);
+      const matchedShape = shapesList.find(s => s.toLowerCase() === searchLower);
+      
+      if (matchedColor) {
+        // Strict color filter: only show cards that have this color assigned
+        filter.colors = matchedColor;
+      } else if (matchedShape) {
+        // Strict shape filter: only show cards that have this shape assigned
+        filter.$or = [
+          { shapes: matchedShape },
+          { shape: matchedShape }
+        ];
+      } else {
+        // Fallback to standard unified search regex
+        const searchRegex = new RegExp(search, 'i');
+        filter.$or = [
+          { name: searchRegex },
+          { description: searchRegex },
+          { series: searchRegex },
+          { category: searchRegex },
+          { tileUses: searchRegex },
+          { effects: searchRegex },
+          { formats: searchRegex },
+          { colors: searchRegex },
+          { shapes: searchRegex },
+          { shape: searchRegex },
+          { styles: searchRegex },
+          { materials: searchRegex },
+          { sizes: searchRegex },
+          { looks: searchRegex },
+          { finishes: searchRegex }
+        ];
+      }
     }
 
     const products = await Product.find(filter);
@@ -387,6 +429,8 @@ export const updateProduct = async (req, res) => {
             color: opt.color,
             sku: opt.sku,
             colors: opt.colors || [],
+            shapes: opt.shapes || [],
+            shape: opt.shape || "",
             name: opt.name,
             productName: opt.productName || "",
             price: Number(opt.price),
@@ -401,6 +445,19 @@ export const updateProduct = async (req, res) => {
             images360: [...(opt.existingImages360 || []), ...((opt.newImages360Indices || []).map(idx => colorImages360Paths[idx]).filter(Boolean))]
           };
         });
+
+        // Auto-aggregate colors and shapes from variations to root level for filtering in update
+        const allOptColors = new Set(productData.colors || []);
+        const allOptShapes = new Set(productData.shapes || []);
+        productData.colorOptions.forEach(opt => {
+            if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
+            if (opt.color) allOptColors.add(opt.color);
+            if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
+            if (opt.shape) allOptShapes.add(opt.shape);
+        });
+        productData.colors = Array.from(allOptColors);
+        productData.shapes = Array.from(allOptShapes);
+
       } catch (e) {
         console.error("Error parsing colorOptionsEdit:", e);
       }

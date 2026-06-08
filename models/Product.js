@@ -21,6 +21,8 @@ const productSchema = new mongoose.Schema({
 
   formats: [String],
   colors: [String],
+  shapes: [String],
+  shape: String,
   sizes: [String],
   tileUses: [String],
   styles: [String],
@@ -37,6 +39,8 @@ const productSchema = new mongoose.Schema({
     sku: String,
     color: String,
     colors: [String],
+    shapes: [String],
+    shape: String,
     images: [String],
     name: String,
     productName: String,
