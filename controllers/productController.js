@@ -16,7 +16,7 @@ export const createProduct = async (req, res) => {
     }
 
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
+    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -76,6 +76,7 @@ export const createProduct = async (req, res) => {
                 pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
                 size: opt.size,
                 sizes: opt.sizes || [],
+                mosaici: opt.mosaici || [],
                 description: opt.description,
                 video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
                 thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
@@ -86,14 +87,17 @@ export const createProduct = async (req, res) => {
             // Auto-aggregate colors and shapes from variations to root level for filtering
             const allOptColors = new Set(productData.colors || []);
             const allOptShapes = new Set(productData.shapes || []);
+            const allOptMosaici = new Set(productData.mosaici || []);
             productData.colorOptions.forEach(opt => {
                 if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
                 if (opt.color) allOptColors.add(opt.color);
                 if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
                 if (opt.shape) allOptShapes.add(opt.shape);
+                if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
             });
             productData.colors = Array.from(allOptColors);
             productData.shapes = Array.from(allOptShapes);
+            productData.mosaici = Array.from(allOptMosaici);
 
             console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, shapes: o.shapes, imgCount: o.images.length, img360Count: o.images360.length })));
         } catch (e) {
@@ -219,6 +223,11 @@ export const getProducts = async (req, res) => {
     if (formattedProducts.length > 0) {
       console.log("Product names:", formattedProducts.map(p => p.name).join(", "));
       console.log("Product series:", formattedProducts.map(p => p.series).join(", "));
+      formattedProducts.forEach(p => {
+        console.log(`Product: ${p.name}`);
+        console.log(`  Root Mosaici: ${JSON.stringify(p.mosaici)}`);
+        console.log(`  ColorOptions Mosaici: ${JSON.stringify(p.colorOptions?.map(o => o.mosaici))}`);
+      });
     }
     res.json(formattedProducts);
   } catch (error) {
@@ -350,7 +359,7 @@ export const updateProduct = async (req, res) => {
     }
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -438,6 +447,7 @@ export const updateProduct = async (req, res) => {
             sqftPerBox: Number(opt.sqftPerBox),
             pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
             sizes: opt.sizes || [],
+            mosaici: opt.mosaici || [],
             description: opt.description,
             thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
             video: finalVideo,
@@ -449,14 +459,17 @@ export const updateProduct = async (req, res) => {
         // Auto-aggregate colors and shapes from variations to root level for filtering in update
         const allOptColors = new Set(productData.colors || []);
         const allOptShapes = new Set(productData.shapes || []);
+        const allOptMosaici = new Set(productData.mosaici || []);
         productData.colorOptions.forEach(opt => {
             if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
             if (opt.color) allOptColors.add(opt.color);
             if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
             if (opt.shape) allOptShapes.add(opt.shape);
+            if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
         });
         productData.colors = Array.from(allOptColors);
         productData.shapes = Array.from(allOptShapes);
+        productData.mosaici = Array.from(allOptMosaici);
 
       } catch (e) {
         console.error("Error parsing colorOptionsEdit:", e);

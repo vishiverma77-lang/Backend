@@ -30,6 +30,7 @@ const productSchema = new mongoose.Schema({
   looks: [String],
   finishes: [String],
   effects: [String],
+  mosaici: [String],
   variationColors: [{
     name: String,
     image: String
@@ -50,6 +51,7 @@ const productSchema = new mongoose.Schema({
     pricingUnit: { type: String, enum: ["Box", "Sheet"], default: "Box" },
     size: String,
     sizes: [String],
+    mosaici: [String],
     description: String,
     video: String,
     thumbnail: String,

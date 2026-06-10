@@ -22,9 +22,38 @@ router.get("/", async (req, res) => {
       });
     }
 
+    let mosaiciAttr = await Attribute.findOne({ name: "mosaici" });
+    if (!mosaiciAttr) {
+      mosaiciAttr = await Attribute.create({
+        name: "mosaici",
+        values: [
+          "20.5x20.8 cm",
+          "21.1x21.1 cm",
+          "25.8x29.8 cm",
+          "26.5x34.5 cm",
+          "28.3x30.5 cm",
+          "29.4x29.8 cm",
+          "29.9x34.6 cm",
+          "29x30",
+          "30.1x29.8 cm",
+          "30.5x23.5 cm",
+          "30x26 cm",
+          "30x30",
+          "30x30 cm",
+          "31.1x37.7",
+          "31x25.5 cm",
+          "34.6x30 cm",
+          "38x38 cm",
+          "45.8x16.2 cm",
+          "Alpi Bronze Topaz"
+        ]
+      });
+    }
+
     return res.json({
       colors: colorsAttr.values,
-      shapes: shapesAttr.values
+      shapes: shapesAttr.values,
+      mosaici: mosaiciAttr.values
     });
   } catch (err) {
     console.error("Error fetching attributes:", err);
