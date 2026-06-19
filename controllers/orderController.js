@@ -10,9 +10,21 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "No items in order" });
     }
 
+    // Sanitize product IDs by removing variation suffixes
+    const sanitizedItems = items.map(item => {
+      let prodId = item.productId;
+      if (typeof prodId === 'string' && prodId.includes('-')) {
+        prodId = prodId.split('-')[0];
+      }
+      return {
+        ...item,
+        productId: prodId
+      };
+    });
+
     const orderPayload = {
       customer,
-      items,
+      items: sanitizedItems,
       totalAmount,
     };
     

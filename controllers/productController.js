@@ -84,21 +84,6 @@ export const createProduct = async (req, res) => {
                 images360: (opt.images360Indices || []).map(idx => colorImages360Paths[idx]).filter(path => path)
             }));
 
-            // Auto-aggregate colors and shapes from variations to root level for filtering
-            const allOptColors = new Set(productData.colors || []);
-            const allOptShapes = new Set(productData.shapes || []);
-            const allOptMosaici = new Set(productData.mosaici || []);
-            productData.colorOptions.forEach(opt => {
-                if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
-                if (opt.color) allOptColors.add(opt.color);
-                if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
-                if (opt.shape) allOptShapes.add(opt.shape);
-                if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
-            });
-            productData.colors = Array.from(allOptColors);
-            productData.shapes = Array.from(allOptShapes);
-            productData.mosaici = Array.from(allOptMosaici);
-
             console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, shapes: o.shapes, imgCount: o.images.length, img360Count: o.images360.length })));
         } catch (e) {
             console.error("Error parsing colorOptions:", e);
@@ -121,6 +106,32 @@ export const createProduct = async (req, res) => {
 
     }
 
+    // Auto-aggregate colors, shapes and mosaici to root level
+    const allOptColors = new Set(productData.colors || []);
+    const allOptShapes = new Set(productData.shapes || []);
+    const allOptMosaici = new Set(productData.mosaici || []);
+
+    if (productData.colorOptions) {
+        productData.colorOptions.forEach(opt => {
+            if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
+            if (opt.color) allOptColors.add(opt.color);
+            if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
+            if (opt.shape) allOptShapes.add(opt.shape);
+            if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
+        });
+    }
+
+    if (Array.isArray(productData.variationColors)) {
+        productData.variationColors.forEach(vc => {
+            if (typeof vc === 'string') allOptColors.add(vc);
+            else if (vc && vc.name) allOptColors.add(vc.name);
+        });
+    }
+
+    productData.colors = Array.from(allOptColors);
+    productData.shapes = Array.from(allOptShapes);
+    productData.mosaici = Array.from(allOptMosaici);
+
     console.log("Final Product Data:", productData.name);
     const product = new Product(productData);
     const saved = await product.save();
@@ -137,16 +148,28 @@ export const getProducts = async (req, res) => {
   try {
     const filter = {};
     const { effect, format, color, shape, style, material, size, look, finish, search, series } = req.query;
-    if (series) filter.series = series;
-    if (effect) filter.effects = effect;
-    if (format) filter.formats = format;
-    if (color) filter.colors = color;
-    if (shape) filter.shapes = shape;
-    if (style) filter.styles = style;
-    if (material) filter.materials = material;
-    if (size) filter.sizes = size;
-    if (look) filter.looks = look;
-    if (finish) filter.finishes = finish;
+    if (series) filter.series = { $regex: new RegExp(`^${series}$`, 'i') };
+    if (effect) filter.effects = { $regex: new RegExp(`^${effect}$`, 'i') };
+    if (format) filter.formats = { $regex: new RegExp(`^${format}$`, 'i') };
+    if (color) filter.colors = { $regex: new RegExp(`^${color}$`, 'i') };
+    if (shape) {
+      const shapeRegex = new RegExp(`^${shape}$`, 'i');
+      filter.$or = [
+        { shapes: shapeRegex },
+        { shape: shapeRegex }
+      ];
+    }
+    if (style) filter.styles = { $regex: new RegExp(`^${style}$`, 'i') };
+    if (material) filter.materials = { $regex: new RegExp(`^${material}$`, 'i') };
+    if (size) {
+      const sizeRegex = new RegExp(`^${size}$`, 'i');
+      filter.$or = [
+        { sizes: sizeRegex },
+        { size: sizeRegex }
+      ];
+    }
+    if (look) filter.looks = { $regex: new RegExp(`^${look}$`, 'i') };
+    if (finish) filter.finishes = { $regex: new RegExp(`^${finish}$`, 'i') };
 
     // Unified search for all tags, uses, category, description and name
     if (search) {
@@ -162,13 +185,14 @@ export const getProducts = async (req, res) => {
       const matchedShape = shapesList.find(s => s.toLowerCase() === searchLower);
       
       if (matchedColor) {
-        // Strict color filter: only show cards that have this color assigned
-        filter.colors = matchedColor;
+        // Strict color filter (case-insensitive)
+        filter.colors = { $regex: new RegExp(`^${matchedColor}$`, 'i') };
       } else if (matchedShape) {
-        // Strict shape filter: only show cards that have this shape assigned
+        // Strict shape filter (case-insensitive)
+        const shapeRegex = new RegExp(`^${matchedShape}$`, 'i');
         filter.$or = [
-          { shapes: matchedShape },
-          { shape: matchedShape }
+          { shapes: shapeRegex },
+          { shape: shapeRegex }
         ];
       } else {
         // Fallback to standard unified search regex
@@ -195,40 +219,108 @@ export const getProducts = async (req, res) => {
 
     const products = await Product.find(filter);
     
-    // Add fallback to first variation if main visual/description is missing
-    const formattedProducts = products.map(p => {
-      const prod = p.toObject();
-      if ((!prod.images || prod.images.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
-        prod.images = prod.colorOptions[0].images || [];
-      }
-      if (!prod.description && prod.colorOptions && prod.colorOptions.length > 0) {
-        prod.description = prod.colorOptions[0].description || "";
-      }
-      if (!prod.video && prod.colorOptions && prod.colorOptions.length > 0) {
-        prod.video = prod.colorOptions[0].video || "";
-      }
-      if ((!prod.images360 || prod.images360.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
-        prod.images360 = prod.colorOptions[0].images360 || [];
-      }
-      if ((!prod.price || prod.price === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
-        prod.price = prod.colorOptions[0].price || 0;
-        prod.pricingUnit = prod.colorOptions[0].pricingUnit || "Box";
-        prod.pricePerSqft = prod.colorOptions[0].pricePerSqft || 0;
-        prod.sqftPerBox = prod.colorOptions[0].sqftPerBox || 0;
-      }
-      return prod;
-    });
+    let formattedProducts = [];
 
-    console.log(`Found ${formattedProducts.length} products for filter:`, filter);
-    if (formattedProducts.length > 0) {
-      console.log("Product names:", formattedProducts.map(p => p.name).join(", "));
-      console.log("Product series:", formattedProducts.map(p => p.series).join(", "));
-      formattedProducts.forEach(p => {
-        console.log(`Product: ${p.name}`);
-        console.log(`  Root Mosaici: ${JSON.stringify(p.mosaici)}`);
-        console.log(`  ColorOptions Mosaici: ${JSON.stringify(p.colorOptions?.map(o => o.mosaici))}`);
+    if (req.query.admin === "true") {
+      // Original logic for Admin panel (no splitting)
+      formattedProducts = products.map(p => {
+        const prod = p.toObject();
+        if ((!prod.images || prod.images.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.images = prod.colorOptions[0].images || [];
+        }
+        if (!prod.description && prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.description = prod.colorOptions[0].description || "";
+        }
+        if (!prod.video && prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.video = prod.colorOptions[0].video || "";
+        }
+        if ((!prod.images360 || prod.images360.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.images360 = prod.colorOptions[0].images360 || [];
+        }
+        if ((!prod.price || prod.price === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.price = prod.colorOptions[0].price || 0;
+          prod.pricingUnit = prod.colorOptions[0].pricingUnit || "Box";
+          prod.pricePerSqft = prod.colorOptions[0].pricePerSqft || 0;
+          prod.sqftPerBox = prod.colorOptions[0].sqftPerBox || 0;
+        }
+        return prod;
+      });
+    } else {
+      // Split variations for frontend
+      products.forEach(p => {
+        const prod = p.toObject();
+        console.log("DEBUG: product =", prod.name, "colorOptions count =", prod.colorOptions ? prod.colorOptions.length : 0);
+        if (prod.colorOptions && prod.colorOptions.length > 0) {
+          prod.colorOptions.forEach((opt, idx) => {
+            // Apply filtering logic to variation options if filters are present
+            let matches = true;
+
+            if (color) {
+              const varColors = opt.colors && opt.colors.length > 0 ? opt.colors : (opt.color ? [opt.color] : []);
+              if (!varColors.some(c => c?.toLowerCase() === color.toLowerCase())) {
+                matches = false;
+              }
+            }
+            if (shape) {
+              const varShapes = opt.shapes && opt.shapes.length > 0 ? opt.shapes : (opt.shape ? [opt.shape] : []);
+              if (!varShapes.some(s => s?.toLowerCase() === shape.toLowerCase())) {
+                matches = false;
+              }
+            }
+            if (size) {
+              const varSizes = opt.sizes && opt.sizes.length > 0 ? opt.sizes : (opt.size ? [opt.size] : []);
+              if (!varSizes.some(s => s?.toLowerCase() === size.toLowerCase())) {
+                matches = false;
+              }
+            }
+            if (search) {
+              const searchLower = search.trim().toLowerCase();
+              const nameMatch = (opt.productName || "").toLowerCase().includes(searchLower) || (opt.name || "").toLowerCase().includes(searchLower) || prod.name.toLowerCase().includes(searchLower);
+              const descMatch = (opt.description || "").toLowerCase().includes(searchLower) || (prod.description || "").toLowerCase().includes(searchLower);
+              const colorMatch = (opt.colors || []).some(c => c?.toLowerCase().includes(searchLower)) || (opt.color && opt.color.toLowerCase().includes(searchLower)) || (prod.colors || []).some(c => c?.toLowerCase().includes(searchLower));
+              const shapeMatch = (opt.shapes || []).some(s => s?.toLowerCase().includes(searchLower)) || (opt.shape && opt.shape.toLowerCase().includes(searchLower)) || (prod.shapes || []).some(s => s?.toLowerCase().includes(searchLower));
+              const categoryMatch = (prod.category || "").toLowerCase().includes(searchLower);
+              const seriesMatch = (prod.series || "").toLowerCase().includes(searchLower);
+              
+              if (!nameMatch && !descMatch && !colorMatch && !shapeMatch && !categoryMatch && !seriesMatch) {
+                matches = false;
+              }
+            }
+
+            if (matches) {
+              const varProd = {
+                ...prod,
+                _id: `${prod._id}-${idx}`,
+                sku: opt.sku || prod.sku,
+                name: opt.productName || (opt.name ? `${prod.name} - ${opt.name}` : prod.name),
+                title: opt.productName || (opt.name ? `${prod.name} - ${opt.name}` : prod.name),
+                price: opt.price || prod.price,
+                pricePerSqft: opt.pricePerSqft || prod.pricePerSqft,
+                sqftPerBox: opt.sqftPerBox || prod.sqftPerBox,
+                pricingUnit: opt.pricingUnit || prod.pricingUnit,
+                description: opt.description || prod.description,
+                images: (opt.images && opt.images.length > 0) ? opt.images : (prod.images || []),
+                video: opt.video || prod.video,
+                images360: (opt.images360 && opt.images360.length > 0) ? opt.images360 : (prod.images360 || []),
+                colors: opt.colors && opt.colors.length > 0 ? opt.colors : (opt.color ? [opt.color] : prod.colors),
+                shapes: opt.shapes && opt.shapes.length > 0 ? opt.shapes : (opt.shape ? [opt.shape] : prod.shapes),
+                sizes: opt.sizes && opt.sizes.length > 0 ? opt.sizes : (opt.size ? [opt.size] : prod.sizes),
+                mosaici: opt.mosaici && opt.mosaici.length > 0 ? opt.mosaici : prod.mosaici,
+                variationName: opt.name || opt.color,
+                variationIndex: idx,
+                selectedVariation: opt
+              };
+              formattedProducts.push(varProd);
+            }
+          });
+        } else {
+          // If no variations exist, add the main product
+          formattedProducts.push(prod);
+        }
       });
     }
+
+    console.log(`Found ${formattedProducts.length} products for filter:`, filter);
     res.json(formattedProducts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -237,7 +329,11 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    let prodId = req.params.id;
+    if (prodId.includes("-")) {
+      prodId = prodId.split("-")[0];
+    }
+    const product = await Product.findById(prodId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -349,7 +445,10 @@ export const getProductById = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    let { id } = req.params;
+    if (id.includes("-")) {
+      id = id.split("-")[0];
+    }
     const productData = { ...req.body };
     
     // Normalize pricingUnit to match Mongoose enum (Capitalized)
@@ -456,21 +555,6 @@ export const updateProduct = async (req, res) => {
           };
         });
 
-        // Auto-aggregate colors and shapes from variations to root level for filtering in update
-        const allOptColors = new Set(productData.colors || []);
-        const allOptShapes = new Set(productData.shapes || []);
-        const allOptMosaici = new Set(productData.mosaici || []);
-        productData.colorOptions.forEach(opt => {
-            if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
-            if (opt.color) allOptColors.add(opt.color);
-            if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
-            if (opt.shape) allOptShapes.add(opt.shape);
-            if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
-        });
-        productData.colors = Array.from(allOptColors);
-        productData.shapes = Array.from(allOptShapes);
-        productData.mosaici = Array.from(allOptMosaici);
-
       } catch (e) {
         console.error("Error parsing colorOptionsEdit:", e);
       }
@@ -507,6 +591,30 @@ export const updateProduct = async (req, res) => {
     const productToUpdate = await Product.findById(id);
     if (!productToUpdate) return res.status(404).json({ message: "Product not found" });
 
+    // Auto-aggregate colors, shapes and mosaici to root level
+    const allOptColors = new Set(productData.colors || productToUpdate.colors || []);
+    const allOptShapes = new Set(productData.shapes || productToUpdate.shapes || []);
+    const allOptMosaici = new Set(productData.mosaici || productToUpdate.mosaici || []);
+
+    const mergedColorOptions = productData.colorOptions || productToUpdate.colorOptions || [];
+    mergedColorOptions.forEach(opt => {
+        if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
+        if (opt.color) allOptColors.add(opt.color);
+        if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
+        if (opt.shape) allOptShapes.add(opt.shape);
+        if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
+    });
+
+    const mergedVariationColors = productData.variationColors || productToUpdate.variationColors || [];
+    mergedVariationColors.forEach(vc => {
+        if (typeof vc === 'string') allOptColors.add(vc);
+        else if (vc && vc.name) allOptColors.add(vc.name);
+    });
+
+    productData.colors = Array.from(allOptColors);
+    productData.shapes = Array.from(allOptShapes);
+    productData.mosaici = Array.from(allOptMosaici);
+
     // Update fields
     Object.assign(productToUpdate, productData);
     productToUpdate.markModified('colorOptions');
@@ -523,7 +631,10 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    let { id } = req.params;
+    if (id.includes("-")) {
+      id = id.split("-")[0];
+    }
     await Product.findByIdAndDelete(id);
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
