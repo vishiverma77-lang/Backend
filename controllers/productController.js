@@ -62,6 +62,7 @@ export const createProduct = async (req, res) => {
     if (typeof productData.colorOptions === 'string') {
         try {
             const parsedOptions = JSON.parse(productData.colorOptions);
+            console.log("BACKEND parsedOptions received:", parsedOptions);
             productData.colorOptions = parsedOptions.map(opt => ({
                 color: opt.color,
                 sku: opt.sku,
@@ -132,7 +133,7 @@ export const createProduct = async (req, res) => {
     productData.shapes = Array.from(allOptShapes);
     productData.mosaici = Array.from(allOptMosaici);
 
-    console.log("Final Product Data:", productData.name);
+    console.log("Final Product Data:", productData.name, "colorOptions:", JSON.stringify(productData.colorOptions, null, 2));
     const product = new Product(productData);
     const saved = await product.save();
     console.log("Product Saved Successfully!");
@@ -353,8 +354,8 @@ export const getProductById = async (req, res) => {
         const mergedProduct = product.toObject();
         
         // Initialize merged arrays with original product data, marking them with parentId
-        const allColorOptions = (mergedProduct.colorOptions || []).map(opt => ({
-          ...opt,
+        const allColorOptions = (product.colorOptions || []).map(opt => ({
+          ...opt.toObject(),
           parentId: product._id
         }));
         
