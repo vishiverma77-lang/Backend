@@ -9,6 +9,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import attributeRoutes from "./routes/attributeRoutes.js";
+import slideRoutes from "./routes/slideRoutes.js";
 
 // Force Node.js to use public DNS for SRV record resolution
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
@@ -46,6 +47,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/auth/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/attributes", attributeRoutes);
+app.use("/api/slides", slideRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

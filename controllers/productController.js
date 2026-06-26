@@ -283,7 +283,18 @@ export const getProducts = async (req, res) => {
               const categoryMatch = (prod.category || "").toLowerCase().includes(searchLower);
               const seriesMatch = (prod.series || "").toLowerCase().includes(searchLower);
               
-              if (!nameMatch && !descMatch && !colorMatch && !shapeMatch && !categoryMatch && !seriesMatch) {
+              const effectsMatch = (prod.effects || []).some(e => e?.toLowerCase().includes(searchLower));
+              const formatsMatch = (prod.formats || []).some(f => f?.toLowerCase().includes(searchLower));
+              const tileUsesMatch = (prod.tileUses || []).some(tu => tu?.toLowerCase().includes(searchLower));
+              const stylesMatch = (prod.styles || []).some(s => s?.toLowerCase().includes(searchLower));
+              const materialsMatch = (prod.materials || []).some(m => m?.toLowerCase().includes(searchLower));
+              const looksMatch = (prod.looks || []).some(l => l?.toLowerCase().includes(searchLower));
+              const finishesMatch = (prod.finishes || []).some(f => f?.toLowerCase().includes(searchLower));
+              const mosaiciMatch = (prod.mosaici || []).some(m => m?.toLowerCase().includes(searchLower)) || (opt.mosaici || []).some(m => m?.toLowerCase().includes(searchLower));
+
+              if (!nameMatch && !descMatch && !colorMatch && !shapeMatch && !categoryMatch && !seriesMatch &&
+                  !effectsMatch && !formatsMatch && !tileUsesMatch && !stylesMatch && !materialsMatch &&
+                  !looksMatch && !finishesMatch && !mosaiciMatch) {
                 matches = false;
               }
             }
@@ -362,6 +373,17 @@ export const getProductById = async (req, res) => {
         const allSizes = new Set(product.sizes || []);
         const allVariationColors = [...(product.variationColors || [])];
 
+        // Series-wide attributes merging
+        const allEffects = new Set(product.effects || []);
+        const allFormats = new Set(product.formats || []);
+        const allColors = new Set(product.colors || []);
+        const allTileUses = new Set(product.tileUses || []);
+        const allStyles = new Set(product.styles || []);
+        const allMaterials = new Set(product.materials || []);
+        const allLooks = new Set(product.looks || []);
+        const allFinishes = new Set(product.finishes || []);
+        const allMosaici = new Set(product.mosaici || []);
+
         // Merge from siblings
         siblings.forEach(sib => {
           // Merge colorOptions
@@ -388,11 +410,32 @@ export const getProductById = async (req, res) => {
               }
             });
           }
+
+          // Merge parent attributes
+          if (sib.effects) sib.effects.forEach(e => allEffects.add(e));
+          if (sib.formats) sib.formats.forEach(f => allFormats.add(f));
+          if (sib.colors) sib.colors.forEach(c => allColors.add(c));
+          if (sib.tileUses) sib.tileUses.forEach(tu => allTileUses.add(tu));
+          if (sib.styles) sib.styles.forEach(s => allStyles.add(s));
+          if (sib.materials) sib.materials.forEach(m => allMaterials.add(m));
+          if (sib.looks) sib.looks.forEach(l => allLooks.add(l));
+          if (sib.finishes) sib.finishes.forEach(f => allFinishes.add(f));
+          if (sib.mosaici) sib.mosaici.forEach(m => allMosaici.add(m));
         });
 
         mergedProduct.colorOptions = allColorOptions;
         mergedProduct.sizes = Array.from(allSizes);
         mergedProduct.variationColors = allVariationColors;
+
+        mergedProduct.effects = Array.from(allEffects);
+        mergedProduct.formats = Array.from(allFormats);
+        mergedProduct.colors = Array.from(allColors);
+        mergedProduct.tileUses = Array.from(allTileUses);
+        mergedProduct.styles = Array.from(allStyles);
+        mergedProduct.materials = Array.from(allMaterials);
+        mergedProduct.looks = Array.from(allLooks);
+        mergedProduct.finishes = Array.from(allFinishes);
+        mergedProduct.mosaici = Array.from(allMosaici);
 
         if ((!mergedProduct.images || mergedProduct.images.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
           mergedProduct.images = mergedProduct.colorOptions[0].images || [];
