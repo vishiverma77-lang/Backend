@@ -7,20 +7,16 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const attributesList = [
-      { name: "colors", values: ["Azul", "Beige", "Black", "Blue", "Bronze", "Brown", "Dark Grey", "Grey", "Metallic Brown", "White"] },
-      { name: "shapes", values: ["Chevron", "Herringbone", "Hexagon", "Pickets", "Planks", "Rectangle", "Rhombus", "Square", "Trapezium", "Triangle", "Woven Square"] },
-      { name: "mosaici", values: [
-        "20.5x20.8 cm", "21.1x21.1 cm", "25.8x29.8 cm", "26.5x34.5 cm", "28.3x30.5 cm", "29.4x29.8 cm", "29.9x34.6 cm",
-        "29x30", "30.1x29.8 cm", "30.5x23.5 cm", "30x26 cm", "30x30", "30x30 cm", "31.1x37.7", "31x25.5 cm",
-        "34.6x30 cm", "38x38 cm", "45.8x16.2 cm", "Alpi Bronze Topaz"
-      ] },
-      { name: "effects", values: ["Concrete", "Stone", "Wood", "Marble", "Metal", "Contemporary", "Precious Metal", "Artisan", "Carpet"] },
-      { name: "formats", values: ["Small", "Medium", "Large", "Slabs", "Planks", "Stripes", "Chevron", "Hexagon"] },
+      { name: "colors", values: [] },
+      { name: "shapes", values: [] },
+      { name: "mosaici", values: [] },
+      { name: "effects", values: [] },
+      { name: "formats", values: [] },
       { name: "tileUses", values: ["Bathroom Wall", "Outdoor Wall", "Kitchen Wall", "Wall Tile", "Backsplash", "Shower Wall", "Kitchen Floor", "Floor Tile", "Bathroom Floor", "Commercial Floor", "Outdoor Floor", "Shower Floor", "Pool Tile"] },
       { name: "styles", values: ["Traditional", "Contemporary", "Rustic", "Modern", "Transitional", "Industrial", "Classic", "Mediterranean", "Mid Century", "Farmhouse", "Craftsman", "Beach", "Cottage", "Tropical", "Art Deco", "Whimsical", "Spanish Revival"] },
       { name: "materials", values: ["Ceramic & Porcelain", "Porcelain", "Stone", "Marble", "Glass", "Ceramic", "Terrazzo", "Pebble Tile", "Terracotta", "Lava Stone", "Clay Brick", "Cement"] },
       { name: "looks", values: ["Stone Look", "Decorative Look", "Marble Look", "Concrete Look", "Solid Color", "Wood Look", "3D", "Subway Tile"] },
-      { name: "finishes", values: ["Matte", "Polished", "Textured", "Satin", "Crackled"] }
+      { name: "finishes", values: [] }
     ];
 
     const result = {};
@@ -51,6 +47,41 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Cleanup route to remove static values from database
+router.get("/cleanup", async (req, res) => {
+  try {
+    const staticValues = {
+      colors: ["Azul", "Beige", "Black", "Blue", "Bronze", "Brown", "Dark Grey", "Grey", "Metallic Brown", "White"],
+      shapes: ["Chevron", "Herringbone", "Hexagon", "Pickets", "Planks", "Rectangle", "Rhombus", "Square", "Trapezium", "Triangle", "Woven Square"],
+      mosaici: [
+        "20.5x20.8 cm", "21.1x21.1 cm", "25.8x29.8 cm", "26.5x34.5 cm", "28.3x30.5 cm", "29.4x29.8 cm", "29.9x34.6 cm",
+        "29x30", "30.1x29.8 cm", "30.5x23.5 cm", "30x26 cm", "30x30", "30x30 cm", "31.1x37.7", "31x25.5 cm",
+        "34.6x30 cm", "38x38 cm", "45.8x16.2 cm", "Alpi Bronze Topaz"
+      ],
+      effects: ["Concrete", "Stone", "Wood", "Marble", "Metal", "Contemporary", "Precious Metal", "Artisan", "Carpet"],
+      formats: ["Small", "Medium", "Large", "Slabs", "Planks", "Stripes", "Chevron", "Hexagon"],
+      finishes: ["Matte", "Polished", "Textured", "Satin", "Crackled"]
+    };
+
+    const details = {};
+    for (const key of Object.keys(staticValues)) {
+      const doc = await Attribute.findOne({ name: key });
+      if (doc) {
+        const originalCount = doc.values.length;
+        doc.values = doc.values.filter(val => !staticValues[key].includes(val));
+        await doc.save();
+        details[key] = `Reduced from ${originalCount} to ${doc.values.length} values`;
+      } else {
+        details[key] = `Attribute not found`;
+      }
+    }
+    return res.json({ message: "Database cleanup completed successfully!", details });
+  } catch (err) {
+    console.error("Error during database cleanup route:", err);
+    return res.status(500).json({ message: "Server error cleaning up attributes", error: err.message });
+  }
+});
+
 // Add a value to an attribute list
 router.post("/:name/add", async (req, res) => {
   try {
@@ -70,16 +101,16 @@ router.post("/:name/add", async (req, res) => {
     const formattedValue = trimmedValue.charAt(0).toUpperCase() + trimmedValue.slice(1);
 
     const defaults = {
-      colors: ["Azul", "Beige", "Black", "Blue", "Bronze", "Brown", "Dark Grey", "Grey", "Metallic Brown", "White"],
-      shapes: ["Chevron", "Herringbone", "Hexagon", "Pickets", "Planks", "Rectangle", "Rhombus", "Square", "Trapezium", "Triangle", "Woven Square"],
-      mosaici: ["20.5x20.8 cm", "21.1x21.1 cm", "25.8x29.8 cm", "26.5x34.5 cm", "28.3x30.5 cm", "29.4x29.8 cm", "29.9x34.6 cm", "29x30", "30.1x29.8 cm", "30.5x23.5 cm", "30x26 cm", "30x30", "30x30 cm", "31.1x37.7", "31x25.5 cm", "34.6x30 cm", "38x38 cm", "45.8x16.2 cm", "Alpi Bronze Topaz"],
-      effects: ["Concrete", "Stone", "Wood", "Marble", "Metal", "Contemporary", "Precious Metal", "Artisan", "Carpet"],
-      formats: ["Small", "Medium", "Large", "Slabs", "Planks", "Stripes", "Chevron", "Hexagon"],
+      colors: [],
+      shapes: [],
+      mosaici: [],
+      effects: [],
+      formats: [],
       tileUses: ["Bathroom Wall", "Outdoor Wall", "Kitchen Wall", "Wall Tile", "Backsplash", "Shower Wall", "Kitchen Floor", "Floor Tile", "Bathroom Floor", "Commercial Floor", "Outdoor Floor", "Shower Floor", "Pool Tile"],
       styles: ["Traditional", "Contemporary", "Rustic", "Modern", "Transitional", "Industrial", "Classic", "Mediterranean", "Mid Century", "Farmhouse", "Craftsman", "Beach", "Cottage", "Tropical", "Art Deco", "Whimsical", "Spanish Revival"],
       materials: ["Ceramic & Porcelain", "Porcelain", "Stone", "Marble", "Glass", "Ceramic", "Terrazzo", "Pebble Tile", "Terracotta", "Lava Stone", "Clay Brick", "Cement"],
       looks: ["Stone Look", "Decorative Look", "Marble Look", "Concrete Look", "Solid Color", "Wood Look", "3D", "Subway Tile"],
-      finishes: ["Matte", "Polished", "Textured", "Satin", "Crackled"]
+      finishes: []
     };
 
     let attr = await Attribute.findOne({ name });
@@ -128,16 +159,16 @@ router.post("/:name/delete", async (req, res) => {
     }
 
     const defaults = {
-      colors: ["Azul", "Beige", "Black", "Blue", "Bronze", "Brown", "Dark Grey", "Grey", "Metallic Brown", "White"],
-      shapes: ["Chevron", "Herringbone", "Hexagon", "Pickets", "Planks", "Rectangle", "Rhombus", "Square", "Trapezium", "Triangle", "Woven Square"],
-      mosaici: ["20.5x20.8 cm", "21.1x21.1 cm", "25.8x29.8 cm", "26.5x34.5 cm", "28.3x30.5 cm", "29.4x29.8 cm", "29.9x34.6 cm", "29x30", "30.1x29.8 cm", "30.5x23.5 cm", "30x26 cm", "30x30", "30x30 cm", "31.1x37.7", "31x25.5 cm", "34.6x30 cm", "38x38 cm", "45.8x16.2 cm", "Alpi Bronze Topaz"],
-      effects: ["Concrete", "Stone", "Wood", "Marble", "Metal", "Contemporary", "Precious Metal", "Artisan", "Carpet"],
-      formats: ["Small", "Medium", "Large", "Slabs", "Planks", "Stripes", "Chevron", "Hexagon"],
+      colors: [],
+      shapes: [],
+      mosaici: [],
+      effects: [],
+      formats: [],
       tileUses: ["Bathroom Wall", "Outdoor Wall", "Kitchen Wall", "Wall Tile", "Backsplash", "Shower Wall", "Kitchen Floor", "Floor Tile", "Bathroom Floor", "Commercial Floor", "Outdoor Floor", "Shower Floor", "Pool Tile"],
       styles: ["Traditional", "Contemporary", "Rustic", "Modern", "Transitional", "Industrial", "Classic", "Mediterranean", "Mid Century", "Farmhouse", "Craftsman", "Beach", "Cottage", "Tropical", "Art Deco", "Whimsical", "Spanish Revival"],
       materials: ["Ceramic & Porcelain", "Porcelain", "Stone", "Marble", "Glass", "Ceramic", "Terrazzo", "Pebble Tile", "Terracotta", "Lava Stone", "Clay Brick", "Cement"],
       looks: ["Stone Look", "Decorative Look", "Marble Look", "Concrete Look", "Solid Color", "Wood Look", "3D", "Subway Tile"],
-      finishes: ["Matte", "Polished", "Textured", "Satin", "Crackled"]
+      finishes: []
     };
 
     const defaultList = defaults[name] || [];

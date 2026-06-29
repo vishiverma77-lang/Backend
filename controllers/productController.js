@@ -78,6 +78,9 @@ export const createProduct = async (req, res) => {
                 size: opt.size,
                 sizes: opt.sizes || [],
                 mosaici: opt.mosaici || [],
+                effects: opt.effects || [],
+                finishes: opt.finishes || [],
+                formats: opt.formats || [],
                 description: opt.description,
                 video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
                 thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
@@ -107,10 +110,13 @@ export const createProduct = async (req, res) => {
 
     }
 
-    // Auto-aggregate colors, shapes and mosaici to root level
+    // Auto-aggregate colors, shapes, mosaici, effects, finishes, formats to root level
     const allOptColors = new Set(productData.colors || []);
     const allOptShapes = new Set(productData.shapes || []);
     const allOptMosaici = new Set(productData.mosaici || []);
+    const allOptEffects = new Set(productData.effects || []);
+    const allOptFinishes = new Set(productData.finishes || []);
+    const allOptFormats = new Set(productData.formats || []);
 
     if (productData.colorOptions) {
         productData.colorOptions.forEach(opt => {
@@ -119,6 +125,9 @@ export const createProduct = async (req, res) => {
             if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
             if (opt.shape) allOptShapes.add(opt.shape);
             if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
+            if (opt.effects) opt.effects.forEach(e => allOptEffects.add(e));
+            if (opt.finishes) opt.finishes.forEach(f => allOptFinishes.add(f));
+            if (opt.formats) opt.formats.forEach(f => allOptFormats.add(f));
         });
     }
 
@@ -132,6 +141,9 @@ export const createProduct = async (req, res) => {
     productData.colors = Array.from(allOptColors);
     productData.shapes = Array.from(allOptShapes);
     productData.mosaici = Array.from(allOptMosaici);
+    productData.effects = Array.from(allOptEffects);
+    productData.finishes = Array.from(allOptFinishes);
+    productData.formats = Array.from(allOptFormats);
 
     console.log("Final Product Data:", productData.name, "colorOptions:", JSON.stringify(productData.colorOptions, null, 2));
     const product = new Product(productData);
@@ -274,6 +286,24 @@ export const getProducts = async (req, res) => {
                 matches = false;
               }
             }
+            if (effect) {
+              const varEffects = opt.effects || [];
+              if (!varEffects.some(e => e?.toLowerCase() === effect.toLowerCase())) {
+                matches = false;
+              }
+            }
+            if (finish) {
+              const varFinishes = opt.finishes || [];
+              if (!varFinishes.some(f => f?.toLowerCase() === finish.toLowerCase())) {
+                matches = false;
+              }
+            }
+            if (format) {
+              const varFormats = opt.formats || [];
+              if (!varFormats.some(f => f?.toLowerCase() === format.toLowerCase())) {
+                matches = false;
+              }
+            }
             if (search) {
               const searchLower = search.trim().toLowerCase();
               const nameMatch = (opt.productName || "").toLowerCase().includes(searchLower) || (opt.name || "").toLowerCase().includes(searchLower) || prod.name.toLowerCase().includes(searchLower);
@@ -283,13 +313,13 @@ export const getProducts = async (req, res) => {
               const categoryMatch = (prod.category || "").toLowerCase().includes(searchLower);
               const seriesMatch = (prod.series || "").toLowerCase().includes(searchLower);
               
-              const effectsMatch = (prod.effects || []).some(e => e?.toLowerCase().includes(searchLower));
-              const formatsMatch = (prod.formats || []).some(f => f?.toLowerCase().includes(searchLower));
+              const effectsMatch = (opt.effects || []).some(e => e?.toLowerCase().includes(searchLower)) || (prod.effects || []).some(e => e?.toLowerCase().includes(searchLower));
+              const formatsMatch = (opt.formats || []).some(f => f?.toLowerCase().includes(searchLower)) || (prod.formats || []).some(f => f?.toLowerCase().includes(searchLower));
               const tileUsesMatch = (prod.tileUses || []).some(tu => tu?.toLowerCase().includes(searchLower));
               const stylesMatch = (prod.styles || []).some(s => s?.toLowerCase().includes(searchLower));
               const materialsMatch = (prod.materials || []).some(m => m?.toLowerCase().includes(searchLower));
               const looksMatch = (prod.looks || []).some(l => l?.toLowerCase().includes(searchLower));
-              const finishesMatch = (prod.finishes || []).some(f => f?.toLowerCase().includes(searchLower));
+              const finishesMatch = (opt.finishes || []).some(f => f?.toLowerCase().includes(searchLower)) || (prod.finishes || []).some(f => f?.toLowerCase().includes(searchLower));
               const mosaiciMatch = (prod.mosaici || []).some(m => m?.toLowerCase().includes(searchLower)) || (opt.mosaici || []).some(m => m?.toLowerCase().includes(searchLower));
 
               if (!nameMatch && !descMatch && !colorMatch && !shapeMatch && !categoryMatch && !seriesMatch &&
@@ -318,6 +348,9 @@ export const getProducts = async (req, res) => {
                 shapes: opt.shapes && opt.shapes.length > 0 ? opt.shapes : (opt.shape ? [opt.shape] : prod.shapes),
                 sizes: opt.sizes && opt.sizes.length > 0 ? opt.sizes : (opt.size ? [opt.size] : prod.sizes),
                 mosaici: opt.mosaici && opt.mosaici.length > 0 ? opt.mosaici : prod.mosaici,
+                effects: opt.effects && opt.effects.length > 0 ? opt.effects : prod.effects,
+                finishes: opt.finishes && opt.finishes.length > 0 ? opt.finishes : prod.finishes,
+                formats: opt.formats && opt.formats.length > 0 ? opt.formats : prod.formats,
                 variationName: opt.name || opt.color,
                 variationIndex: idx,
                 selectedVariation: opt
@@ -591,6 +624,9 @@ export const updateProduct = async (req, res) => {
             pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
             sizes: opt.sizes || [],
             mosaici: opt.mosaici || [],
+            effects: opt.effects || [],
+            finishes: opt.finishes || [],
+            formats: opt.formats || [],
             description: opt.description,
             thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
             video: finalVideo,
@@ -635,10 +671,13 @@ export const updateProduct = async (req, res) => {
     const productToUpdate = await Product.findById(id);
     if (!productToUpdate) return res.status(404).json({ message: "Product not found" });
 
-    // Auto-aggregate colors, shapes and mosaici to root level
+    // Auto-aggregate colors, shapes, mosaici, effects, finishes, formats to root level
     const allOptColors = new Set(productData.colors || productToUpdate.colors || []);
     const allOptShapes = new Set(productData.shapes || productToUpdate.shapes || []);
     const allOptMosaici = new Set(productData.mosaici || productToUpdate.mosaici || []);
+    const allOptEffects = new Set(productData.effects || productToUpdate.effects || []);
+    const allOptFinishes = new Set(productData.finishes || productToUpdate.finishes || []);
+    const allOptFormats = new Set(productData.formats || productToUpdate.formats || []);
 
     const mergedColorOptions = productData.colorOptions || productToUpdate.colorOptions || [];
     mergedColorOptions.forEach(opt => {
@@ -647,6 +686,9 @@ export const updateProduct = async (req, res) => {
         if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
         if (opt.shape) allOptShapes.add(opt.shape);
         if (opt.mosaici) opt.mosaici.forEach(m => allOptMosaici.add(m));
+        if (opt.effects) opt.effects.forEach(e => allOptEffects.add(e));
+        if (opt.finishes) opt.finishes.forEach(f => allOptFinishes.add(f));
+        if (opt.formats) opt.formats.forEach(f => allOptFormats.add(f));
     });
 
     const mergedVariationColors = productData.variationColors || productToUpdate.variationColors || [];
@@ -658,6 +700,9 @@ export const updateProduct = async (req, res) => {
     productData.colors = Array.from(allOptColors);
     productData.shapes = Array.from(allOptShapes);
     productData.mosaici = Array.from(allOptMosaici);
+    productData.effects = Array.from(allOptEffects);
+    productData.finishes = Array.from(allOptFinishes);
+    productData.formats = Array.from(allOptFormats);
 
     // Update fields
     Object.assign(productToUpdate, productData);
