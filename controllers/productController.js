@@ -71,9 +71,11 @@ export const createProduct = async (req, res) => {
                 shape: opt.shape || "",
                 name: opt.name,
                 productName: opt.productName || "",
+                collectionName: opt.collectionName || "",
                 price: Number(opt.price),
-                pricePerSqft: Number(opt.pricePerSqft),
-                sqftPerBox: Number(opt.sqftPerBox),
+                pricePerSqft: Number(opt.pricePerSqft) || 0,
+                sqftPerBox: Number(opt.sqftPerBox) || 0,
+                weightPerBox: Number(opt.weightPerBox) || 0,
                 pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
                 size: opt.size,
                 sizes: opt.sizes || [],
@@ -339,6 +341,7 @@ export const getProducts = async (req, res) => {
                 price: opt.price || prod.price,
                 pricePerSqft: opt.pricePerSqft || prod.pricePerSqft,
                 sqftPerBox: opt.sqftPerBox || prod.sqftPerBox,
+                weightPerBox: opt.weightPerBox || prod.weightPerBox,
                 pricingUnit: opt.pricingUnit || prod.pricingUnit,
                 description: opt.description || prod.description,
                 images: (opt.images && opt.images.length > 0) ? opt.images : (prod.images || []),
@@ -487,6 +490,7 @@ export const getProductById = async (req, res) => {
           mergedProduct.pricingUnit = mergedProduct.colorOptions[0].pricingUnit || "Box";
           mergedProduct.pricePerSqft = mergedProduct.colorOptions[0].pricePerSqft || 0;
           mergedProduct.sqftPerBox = mergedProduct.colorOptions[0].sqftPerBox || 0;
+          mergedProduct.weightPerBox = mergedProduct.colorOptions[0].weightPerBox || 0;
         }
 
         return res.json(mergedProduct);
@@ -511,6 +515,7 @@ export const getProductById = async (req, res) => {
       mergedProduct.pricingUnit = mergedProduct.colorOptions[0].pricingUnit || "Box";
       mergedProduct.pricePerSqft = mergedProduct.colorOptions[0].pricePerSqft || 0;
       mergedProduct.sqftPerBox = mergedProduct.colorOptions[0].sqftPerBox || 0;
+      mergedProduct.weightPerBox = mergedProduct.colorOptions[0].weightPerBox || 0;
     }
 
     res.json(mergedProduct);
@@ -618,9 +623,11 @@ export const updateProduct = async (req, res) => {
             shape: opt.shape || "",
             name: opt.name,
             productName: opt.productName || "",
+            collectionName: opt.collectionName || "",
             price: Number(opt.price),
-            pricePerSqft: Number(opt.pricePerSqft),
-            sqftPerBox: Number(opt.sqftPerBox),
+            pricePerSqft: Number(opt.pricePerSqft) || 0,
+            sqftPerBox: Number(opt.sqftPerBox) || 0,
+            weightPerBox: Number(opt.weightPerBox) || 0,
             pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
             sizes: opt.sizes || [],
             mosaici: opt.mosaici || [],

@@ -1,5 +1,5 @@
 import express from "express";
-import { createOrder, getOrders, updateOrderStatus, deleteOrder, getMyOrders } from "../controllers/orderController.js";
+import { createOrder, getOrders, updateOrderStatus, deleteOrder, getMyOrders, calculateDelivery } from "../controllers/orderController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -8,6 +8,7 @@ const router = express.Router();
 router.get("/my-orders", authenticateUser, getMyOrders);
 
 // All other order routes - no auth required (admin panel is open)
+router.post("/calculate-delivery", calculateDelivery);
 router.post("/", createOrder);
 router.get("/", getOrders);
 router.put("/:id/status", updateOrderStatus);

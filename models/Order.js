@@ -26,6 +26,8 @@ const orderSchema = new mongoose.Schema(
       },
     ],
     totalAmount: { type: Number, required: true },
+    deliveryCharge: { type: Number, default: 0 },
+    distance: { type: Number, default: 0 },
     status: {
       type: String,
       enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
