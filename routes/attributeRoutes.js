@@ -17,7 +17,9 @@ router.get("/", async (req, res) => {
       { name: "styles", values: ["Traditional", "Contemporary", "Rustic", "Modern", "Transitional", "Industrial", "Classic", "Mediterranean", "Mid Century", "Farmhouse", "Craftsman", "Beach", "Cottage", "Tropical", "Art Deco", "Whimsical", "Spanish Revival"] },
       { name: "materials", values: ["Ceramic & Porcelain", "Porcelain", "Stone", "Marble", "Glass", "Ceramic", "Terrazzo", "Pebble Tile", "Terracotta", "Lava Stone", "Clay Brick", "Cement"] },
       { name: "looks", values: ["Stone Look", "Decorative Look", "Marble Look", "Concrete Look", "Solid Color", "Wood Look", "3D", "Subway Tile"] },
-      { name: "finishes", values: [] }
+      { name: "finishes", values: [] },
+      { name: "connoisseurCollections", values: [] },
+      { name: "bespokeCollections", values: [] }
     ];
 
     const result = {};
@@ -187,6 +189,26 @@ router.post("/:name/delete", async (req, res) => {
   } catch (err) {
     console.error(`Error deleting attribute value for ${req.params.name}:`, err);
     return res.status(500).json({ message: "Server error deleting attribute value" });
+  }
+});
+
+// Set / Overwrite entire values array for an attribute (e.g. connoisseurCollections)
+router.post("/:name/set", async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { values } = req.body;
+    if (!Array.isArray(values)) {
+      return res.status(400).json({ message: "Values must be an array" });
+    }
+    const attr = await Attribute.findOneAndUpdate(
+      { name },
+      { values },
+      { upsert: true, new: true }
+    );
+    return res.json({ name, values: attr.values });
+  } catch (err) {
+    console.error(`Error setting attribute values for ${req.params.name}:`, err);
+    return res.status(500).json({ message: "Server error setting attribute values" });
   }
 });
 

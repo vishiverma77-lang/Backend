@@ -22,9 +22,16 @@ const storage = new CloudinaryStorage({
       };
     }
     
+    if (file.mimetype === 'application/pdf' || file.originalname?.toLowerCase().endsWith('.pdf')) {
+      return {
+        folder: 'ceragres_products',
+        resource_type: 'raw',
+      };
+    }
+    
     return {
       folder: 'ceragres_products',
-      allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf'],
       transformation: [{ width: 800, height: 800, crop: 'limit' }],
     };
   },

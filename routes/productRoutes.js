@@ -20,6 +20,7 @@ router.post("/", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
+  { name: "colorCatalogs", maxCount: 20 },
   { name: "images360", maxCount: 36 },
   { name: "colorImages360", maxCount: 150 },
   { name: "variationColorImages", maxCount: 20 }
@@ -31,6 +32,7 @@ router.put("/:id", upload.fields([
   { name: "video", maxCount: 1 },
   { name: "colorVideos", maxCount: 20 },
   { name: "colorThumbnails", maxCount: 20 },
+  { name: "colorCatalogs", maxCount: 20 },
   { name: "images360", maxCount: 36 },
   { name: "colorImages360", maxCount: 150 },
   { name: "variationColorImages", maxCount: 20 }

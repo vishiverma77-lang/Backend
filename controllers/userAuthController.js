@@ -5,10 +5,13 @@ import bcrypt from "bcryptjs";
 // Register Logic
 export const register = async (req, res) => {
     try {
-        const { email, phone, password } = req.body;
+        const { name, email, phone, address, accountType, password } = req.body;
 
         // Check if user already exists
-        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+        const query = [{ email }];
+        if (phone) query.push({ phone });
+
+        const existingUser = await User.findOne({ $or: query });
         if (existingUser) {
             return res.status(400).json({ message: "User with this email or phone already exists." });
         }
@@ -19,8 +22,11 @@ export const register = async (req, res) => {
 
         // Create new user
         const newUser = new User({
+            name: name || "",
             email,
-            phone,
+            phone: phone || "",
+            address: address || "",
+            accountType: accountType ? (accountType.charAt(0).toUpperCase() + accountType.slice(1)) : "Customer",
             password: hashedPassword
         });
 
@@ -38,8 +44,11 @@ export const register = async (req, res) => {
             token,
             user: {
                 id: newUser._id,
+                name: newUser.name,
                 email: newUser.email,
                 phone: newUser.phone,
+                address: newUser.address,
+                accountType: newUser.accountType,
                 role: newUser.role
             }
         });
@@ -53,10 +62,10 @@ export const register = async (req, res) => {
 // Login Logic
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, name, phone, address, accountType } = req.body;
 
         // Find user by email
-        const user = await User.findOne({ email });
+        let user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ message: "Invalid Email or Password." });
         }
@@ -67,14 +76,17 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: "Invalid Email or Password." });
         }
 
-        // Update login info
+        // Update login info and optional profile updates
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
         user.lastLogin = new Date();
         user.lastLoginIP = ip;
+        user.lastLoginLocation = "Localhost";
         
-        // Simple location detection (can be expanded)
-        user.lastLoginLocation = "Localhost"; // Default for local dev
-        
+        if (name && !user.name) user.name = name;
+        if (phone && !user.phone) user.phone = phone;
+        if (address && !user.address) user.address = address;
+        if (accountType) user.accountType = accountType.charAt(0).toUpperCase() + accountType.slice(1);
+
         await user.save();
 
         // Generate JWT Token
@@ -89,8 +101,11 @@ export const login = async (req, res) => {
             token,
             user: {
                 id: user._id,
+                name: user.name,
                 email: user.email,
                 phone: user.phone,
+                address: user.address,
+                accountType: user.accountType,
                 role: user.role
             }
         });
@@ -101,23 +116,39 @@ export const login = async (req, res) => {
     }
 };
 
-// Admin: Get All Users
+// Check Auth Logic
+export const checkAuth = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("-password");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error("Check Auth Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// Get All Users (for Admin Customer Details)
 export const getAllUsers = async (req, res) => {
     try {
         const users = await User.find().select("-password").sort({ createdAt: -1 });
         res.json(users);
     } catch (error) {
-        res.status(500).json({ message: "Failed to fetch users." });
+        console.error("Get Users Error:", error);
+        res.status(500).json({ message: "Server error fetching users." });
     }
 };
 
-// Check Auth Logic
-export const checkAuth = async (req, res) => {
+// Delete User (for Admin)
+export const deleteUser = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select("-password");
-        if (!user) return res.status(404).json({ message: "User not found" });
-        res.json(user);
+        const { id } = req.params;
+        await User.findByIdAndDelete(id);
+        res.json({ message: "User deleted successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Auth check failed" });
+        console.error("Delete User Error:", error);
+        res.status(500).json({ message: "Server error deleting user." });
     }
 };

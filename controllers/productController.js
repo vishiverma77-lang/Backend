@@ -35,6 +35,7 @@ export const createProduct = async (req, res) => {
       colorImages: colorImageFiles = [],
       colorThumbnails: colorThumbnailFiles = [],
       colorVideos: colorVideoFiles = [], 
+      colorCatalogs: colorCatalogFiles = [],
       images360: images360Files = [],
       colorImages360: colorImages360Files = [],
       variationColorImages: variationColorImageFiles = []
@@ -54,6 +55,7 @@ export const createProduct = async (req, res) => {
     const colorImagePaths = colorImageFiles.map(f => f.path);
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
+    const colorCatalogPaths = colorCatalogFiles.map(f => f.path);
     const colorImages360Paths = colorImages360Files.map(f => f.path);
     const variationColorImagePaths = variationColorImageFiles.map(f => f.path);
 
@@ -72,6 +74,7 @@ export const createProduct = async (req, res) => {
                 name: opt.name,
                 productName: opt.productName || "",
                 collectionName: opt.collectionName || "",
+                catalog: (opt.catalogIndex !== undefined && colorCatalogPaths[opt.catalogIndex]) ? colorCatalogPaths[opt.catalogIndex] : (opt.catalog || ""),
                 price: Number(opt.price),
                 pricePerSqft: Number(opt.pricePerSqft) || 0,
                 sqftPerBox: Number(opt.sqftPerBox) || 0,
@@ -554,6 +557,7 @@ export const updateProduct = async (req, res) => {
       colorThumbnails: colorThumbnailFiles = [],
       video: videoFiles = [], 
       colorVideos: colorVideoFiles = [], 
+      colorCatalogs: colorCatalogFiles = [],
       images360: images360Files = [],
       colorImages360: colorImages360Files = [],
       variationColorImages: variationColorImageFiles = []
@@ -567,6 +571,7 @@ export const updateProduct = async (req, res) => {
 
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
+    const colorCatalogPaths = colorCatalogFiles.map(f => f.path);
     const colorImages360Paths = colorImages360Files.map(f => f.path);
 
     // Handle images360
@@ -607,7 +612,7 @@ export const updateProduct = async (req, res) => {
         const colorImagePaths = colorImageFiles.map(f => f.path);
         
         productData.colorOptions = colorOptionsEdit.map(opt => {
-          const newImages = opt.newFileIndices.map(idx => colorImagePaths[idx]).filter(Boolean);
+          const newImages = (opt.newFileIndices || []).map(idx => colorImagePaths[idx]).filter(Boolean);
           let finalVideo = opt.existingVideo || "";
           if (opt.newVideoIndex !== undefined && colorVideoPaths[opt.newVideoIndex]) {
             finalVideo = colorVideoPaths[opt.newVideoIndex];
@@ -624,6 +629,7 @@ export const updateProduct = async (req, res) => {
             name: opt.name,
             productName: opt.productName || "",
             collectionName: opt.collectionName || "",
+            catalog: (opt.newCatalogIndex !== undefined && colorCatalogPaths[opt.newCatalogIndex]) ? colorCatalogPaths[opt.newCatalogIndex] : (opt.existingCatalog || opt.catalog || ""),
             price: Number(opt.price),
             pricePerSqft: Number(opt.pricePerSqft) || 0,
             sqftPerBox: Number(opt.sqftPerBox) || 0,
