@@ -16,7 +16,7 @@ export const createProduct = async (req, res) => {
     }
 
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici"];
+    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -86,6 +86,8 @@ export const createProduct = async (req, res) => {
                 effects: opt.effects || [],
                 finishes: opt.finishes || [],
                 formats: opt.formats || [],
+                applications: opt.applications || [],
+                supercollections: opt.supercollections || [],
                 description: opt.description,
                 video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
                 thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
@@ -122,9 +124,12 @@ export const createProduct = async (req, res) => {
     const allOptEffects = new Set(productData.effects || []);
     const allOptFinishes = new Set(productData.finishes || []);
     const allOptFormats = new Set(productData.formats || []);
+    const allOptApplications = new Set(productData.applications || []);
+    const allOptSupercollections = new Set(productData.supercollections || []);
 
     if (productData.colorOptions) {
         productData.colorOptions.forEach(opt => {
+            if (opt.catalog && !productData.catalog) productData.catalog = opt.catalog;
             if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
             if (opt.color) allOptColors.add(opt.color);
             if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
@@ -133,6 +138,8 @@ export const createProduct = async (req, res) => {
             if (opt.effects) opt.effects.forEach(e => allOptEffects.add(e));
             if (opt.finishes) opt.finishes.forEach(f => allOptFinishes.add(f));
             if (opt.formats) opt.formats.forEach(f => allOptFormats.add(f));
+            if (opt.applications) opt.applications.forEach(a => allOptApplications.add(a));
+            if (opt.supercollections) opt.supercollections.forEach(sc => allOptSupercollections.add(sc));
         });
     }
 
@@ -149,6 +156,8 @@ export const createProduct = async (req, res) => {
     productData.effects = Array.from(allOptEffects);
     productData.finishes = Array.from(allOptFinishes);
     productData.formats = Array.from(allOptFormats);
+    productData.applications = Array.from(allOptApplications);
+    productData.supercollections = Array.from(allOptSupercollections);
 
     console.log("Final Product Data:", productData.name, "colorOptions:", JSON.stringify(productData.colorOptions, null, 2));
     const product = new Product(productData);
@@ -326,10 +335,12 @@ export const getProducts = async (req, res) => {
               const looksMatch = (prod.looks || []).some(l => l?.toLowerCase().includes(searchLower));
               const finishesMatch = (opt.finishes || []).some(f => f?.toLowerCase().includes(searchLower)) || (prod.finishes || []).some(f => f?.toLowerCase().includes(searchLower));
               const mosaiciMatch = (prod.mosaici || []).some(m => m?.toLowerCase().includes(searchLower)) || (opt.mosaici || []).some(m => m?.toLowerCase().includes(searchLower));
+              const applicationsMatch = (opt.applications || []).some(a => a?.toLowerCase().includes(searchLower)) || (prod.applications || []).some(a => a?.toLowerCase().includes(searchLower));
+              const supercollectionsMatch = (opt.supercollections || []).some(sc => sc?.toLowerCase().includes(searchLower)) || (prod.supercollections || []).some(sc => sc?.toLowerCase().includes(searchLower));
 
               if (!nameMatch && !descMatch && !colorMatch && !shapeMatch && !categoryMatch && !seriesMatch &&
                   !effectsMatch && !formatsMatch && !tileUsesMatch && !stylesMatch && !materialsMatch &&
-                  !looksMatch && !finishesMatch && !mosaiciMatch) {
+                  !looksMatch && !finishesMatch && !mosaiciMatch && !applicationsMatch && !supercollectionsMatch) {
                 matches = false;
               }
             }
@@ -357,6 +368,9 @@ export const getProducts = async (req, res) => {
                 effects: opt.effects && opt.effects.length > 0 ? opt.effects : prod.effects,
                 finishes: opt.finishes && opt.finishes.length > 0 ? opt.finishes : prod.finishes,
                 formats: opt.formats && opt.formats.length > 0 ? opt.formats : prod.formats,
+                applications: opt.applications && opt.applications.length > 0 ? opt.applications : prod.applications,
+                supercollections: opt.supercollections && opt.supercollections.length > 0 ? opt.supercollections : prod.supercollections,
+                catalog: opt.catalog || prod.catalog || "",
                 variationName: opt.name || opt.color,
                 variationIndex: idx,
                 selectedVariation: opt
@@ -543,7 +557,7 @@ export const updateProduct = async (req, res) => {
     }
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -640,6 +654,8 @@ export const updateProduct = async (req, res) => {
             effects: opt.effects || [],
             finishes: opt.finishes || [],
             formats: opt.formats || [],
+            applications: opt.applications || [],
+            supercollections: opt.supercollections || [],
             description: opt.description,
             thumbnail: (opt.newThumbnailIndex !== undefined && colorThumbnailPaths[opt.newThumbnailIndex]) ? colorThumbnailPaths[opt.newThumbnailIndex] : (opt.existingThumbnail || ""),
             video: finalVideo,
@@ -691,9 +707,12 @@ export const updateProduct = async (req, res) => {
     const allOptEffects = new Set(productData.effects || productToUpdate.effects || []);
     const allOptFinishes = new Set(productData.finishes || productToUpdate.finishes || []);
     const allOptFormats = new Set(productData.formats || productToUpdate.formats || []);
+    const allOptApplications = new Set(productData.applications || productToUpdate.applications || []);
+    const allOptSupercollections = new Set(productData.supercollections || productToUpdate.supercollections || []);
 
     const mergedColorOptions = productData.colorOptions || productToUpdate.colorOptions || [];
     mergedColorOptions.forEach(opt => {
+        if (opt.catalog && !productData.catalog) productData.catalog = opt.catalog;
         if (opt.colors) opt.colors.forEach(c => allOptColors.add(c));
         if (opt.color) allOptColors.add(opt.color);
         if (opt.shapes) opt.shapes.forEach(s => allOptShapes.add(s));
@@ -702,6 +721,8 @@ export const updateProduct = async (req, res) => {
         if (opt.effects) opt.effects.forEach(e => allOptEffects.add(e));
         if (opt.finishes) opt.finishes.forEach(f => allOptFinishes.add(f));
         if (opt.formats) opt.formats.forEach(f => allOptFormats.add(f));
+        if (opt.applications) opt.applications.forEach(a => allOptApplications.add(a));
+        if (opt.supercollections) opt.supercollections.forEach(sc => allOptSupercollections.add(sc));
     });
 
     const mergedVariationColors = productData.variationColors || productToUpdate.variationColors || [];
@@ -716,6 +737,8 @@ export const updateProduct = async (req, res) => {
     productData.effects = Array.from(allOptEffects);
     productData.finishes = Array.from(allOptFinishes);
     productData.formats = Array.from(allOptFormats);
+    productData.applications = Array.from(allOptApplications);
+    productData.supercollections = Array.from(allOptSupercollections);
 
     // Update fields
     Object.assign(productToUpdate, productData);

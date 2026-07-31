@@ -32,6 +32,8 @@ const productSchema = new mongoose.Schema({
   finishes: [String],
   effects: [String],
   mosaici: [String],
+  applications: [String],
+  supercollections: [String],
   variationColors: [{
     name: String,
     image: String
@@ -60,6 +62,8 @@ const productSchema = new mongoose.Schema({
     effects: [String],
     finishes: [String],
     formats: [String],
+    applications: [String],
+    supercollections: [String],
     description: String,
     video: String,
     thumbnail: String,

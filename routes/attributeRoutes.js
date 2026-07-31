@@ -18,6 +18,8 @@ router.get("/", async (req, res) => {
       { name: "materials", values: ["Ceramic & Porcelain", "Porcelain", "Stone", "Marble", "Glass", "Ceramic", "Terrazzo", "Pebble Tile", "Terracotta", "Lava Stone", "Clay Brick", "Cement"] },
       { name: "looks", values: ["Stone Look", "Decorative Look", "Marble Look", "Concrete Look", "Solid Color", "Wood Look", "3D", "Subway Tile"] },
       { name: "finishes", values: [] },
+      { name: "applications", values: [] },
+      { name: "supercollections", values: [] },
       { name: "connoisseurCollections", values: [] },
       { name: "bespokeCollections", values: [] }
     ];
@@ -27,8 +29,8 @@ router.get("/", async (req, res) => {
       let doc = await Attribute.findOne({ name: attr.name });
       if (!doc) {
         doc = await Attribute.create(attr);
-      } else {
-        // Repair/Merge logic: ensure all default values exist in the database document
+      } else if (attr.name !== "supercollections" && attr.name !== "applications") {
+        // Repair/Merge logic: ensure all default values exist in database document
         let modified = false;
         attr.values.forEach(val => {
           if (!doc.values.includes(val)) {
