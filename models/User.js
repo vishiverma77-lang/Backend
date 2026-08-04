@@ -5,6 +5,30 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  lastName: {
+    type: String,
+    default: ""
+  },
+  zipCode: {
+    type: String,
+    default: ""
+  },
+  state: {
+    type: String,
+    default: ""
+  },
+  profession: {
+    type: String,
+    default: ""
+  },
+  jobTitle: {
+    type: String,
+    default: ""
+  },
+  website: {
+    type: String,
+    default: ""
+  },
   email: {
     type: String,
     required: true,

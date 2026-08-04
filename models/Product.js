@@ -31,6 +31,7 @@ const productSchema = new mongoose.Schema({
   looks: [String],
   finishes: [String],
   effects: [String],
+  thicknesses: [String],
   mosaici: [String],
   applications: [String],
   supercollections: [String],

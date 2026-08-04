@@ -34,7 +34,10 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
     },
     adminNote: { type: String, default: "" },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    razorpayOrderId: { type: String, default: "" },
+    razorpayPaymentId: { type: String, default: "" },
+    paymentStatus: { type: String, default: "Pending" }
   },
   { timestamps: true }
 );
