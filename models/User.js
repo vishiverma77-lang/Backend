@@ -9,6 +9,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  companyName: {
+    type: String,
+    default: ""
+  },
   zipCode: {
     type: String,
     default: ""

@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 // Register Logic
 export const register = async (req, res) => {
     try {
-        const { name, lastName, zipCode, state, profession, jobTitle, website, email, phone, address, accountType, password } = req.body;
+        const { name, lastName, companyName, zipCode, state, profession, jobTitle, website, email, phone, address, accountType, password } = req.body;
 
         // Check if user already exists
         const query = [{ email }];
@@ -24,6 +24,7 @@ export const register = async (req, res) => {
         const newUser = new User({
             name: name || "",
             lastName: lastName || "",
+            companyName: companyName || "",
             zipCode: zipCode || "",
             state: state || "",
             profession: profession || "",
