@@ -31,8 +31,8 @@ const storage = new CloudinaryStorage({
     
     return {
       folder: 'ceragres_products',
-      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'pdf'],
-      transformation: [{ width: 800, height: 800, crop: 'limit' }],
+      allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif', 'avif', 'pdf'],
+      transformation: [{ width: 1200, height: 1200, crop: 'limit' }],
     };
   },
 });

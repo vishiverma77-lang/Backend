@@ -16,7 +16,7 @@ export const createProduct = async (req, res) => {
     }
 
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections"];
+    const arrayFields = ["colors", "shapes", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections", "thicknesses"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {
@@ -557,7 +557,7 @@ export const updateProduct = async (req, res) => {
     }
     
     // Parse arrays that were stringified via FormData
-    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections"];
+    const arrayFields = ["colors", "effects", "formats", "styles", "materials", "sizes", "looks", "finishes", "customSizes", "tileUses", "variationColors", "mosaici", "applications", "supercollections", "thicknesses"];
     arrayFields.forEach(key => {
 
         if (typeof productData[key] === 'string') {

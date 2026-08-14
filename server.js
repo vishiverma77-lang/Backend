@@ -61,11 +61,15 @@ app.get("/", (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error("Global Error Handler:", err.stack);
+  console.error("Global Error Handler:", err?.message || err?.stack || err);
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ message: "File upload error: " + err.message });
   }
-  res.status(err.status || 500).json({ message: err.message || "Something went wrong!" });
+  // Cloudinary / multer-storage-cloudinary errors
+  if (err?.http_code || err?.message?.includes('not allowed') || err?.message?.includes('format')) {
+    return res.status(400).json({ message: "Upload Error: " + err.message });
+  }
+  res.status(err?.status || 500).json({ message: err?.message || "Something went wrong!" });
 });
 
 // Start server
