@@ -25,7 +25,7 @@ const storage = new CloudinaryStorage({
     if (file.mimetype === 'application/pdf' || file.originalname?.toLowerCase().endsWith('.pdf')) {
       return {
         folder: 'ceragres_products',
-        resource_type: 'auto',
+        resource_type: 'raw',
       };
     }
     
