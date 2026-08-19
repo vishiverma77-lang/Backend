@@ -41,6 +41,11 @@ const productSchema = new mongoose.Schema({
   }],
 
   catalog: String,
+  catalogData: {
+    data: String,
+    contentType: String,
+    filename: String
+  },
   colorOptions: [{
     sku: String,
     color: String,
@@ -52,6 +57,11 @@ const productSchema = new mongoose.Schema({
     productName: String,
     collectionName: String,
     catalog: String,
+    catalogData: {
+      data: String,
+      contentType: String,
+      filename: String
+    },
     price: Number,
     pricePerSqft: Number,
     sqftPerBox: Number,

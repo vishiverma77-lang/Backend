@@ -5,7 +5,9 @@ import {
   getProductById, 
   createProduct, 
   updateProduct, 
-  deleteProduct 
+  deleteProduct,
+  downloadCatalog,
+  downloadCatalogDb 
 } from "../controllers/productController.js";
 
 const router = express.Router();
@@ -13,6 +15,9 @@ const router = express.Router();
 // All product routes - open for admin dashboard use
 router.get("/", getProducts);
 router.get("/all", getProducts);
+router.get("/download-catalog", downloadCatalog);
+router.get("/download-catalog-db/:id", downloadCatalogDb);
+router.get("/download-catalog-db/:id/:optIndex", downloadCatalogDb);
 router.get("/:id", getProductById);
 router.post("/", upload.fields([
   { name: "images", maxCount: 30 },

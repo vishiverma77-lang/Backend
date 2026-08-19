@@ -1,5 +1,9 @@
 import Product from "../models/Product.js";
 import Attribute from "../models/Attribute.js";
+import https from "https";
+import http from "http";
+import fs from "fs";
+import path from "path";
 
 export const createProduct = async (req, res) => {
   console.log("Create Product Triggered...");
@@ -56,6 +60,19 @@ export const createProduct = async (req, res) => {
     const colorVideoPaths = colorVideoFiles.map(f => f.path);
     const colorThumbnailPaths = colorThumbnailFiles.map(f => f.path);
     const colorCatalogPaths = colorCatalogFiles.map(f => f.path);
+    const colorCatalogObjects = colorCatalogFiles.map(f => {
+      let b64 = "";
+      if (f.buffer) {
+        b64 = f.buffer.toString("base64");
+      } else if (f.path && fs.existsSync(f.path)) {
+        try { b64 = fs.readFileSync(f.path).toString("base64"); } catch (e) {}
+      }
+      return {
+        data: b64,
+        contentType: "application/pdf",
+        filename: f.originalname || "catalog.pdf"
+      };
+    });
     const colorImages360Paths = colorImages360Files.map(f => f.path);
     const variationColorImagePaths = variationColorImageFiles.map(f => f.path);
 
@@ -65,35 +82,47 @@ export const createProduct = async (req, res) => {
         try {
             const parsedOptions = JSON.parse(productData.colorOptions);
             console.log("BACKEND parsedOptions received:", parsedOptions);
-            productData.colorOptions = parsedOptions.map(opt => ({
-                color: opt.color,
-                sku: opt.sku,
-                colors: opt.colors || [],
-                shapes: opt.shapes || [],
-                shape: opt.shape || "",
-                name: opt.name,
-                productName: opt.productName || "",
-                collectionName: opt.collectionName || "",
-                catalog: (opt.catalogIndex !== undefined && colorCatalogPaths[opt.catalogIndex]) ? colorCatalogPaths[opt.catalogIndex] : (opt.catalog || ""),
-                price: Number(opt.price),
-                pricePerSqft: Number(opt.pricePerSqft) || 0,
-                sqftPerBox: Number(opt.sqftPerBox) || 0,
-                weightPerBox: Number(opt.weightPerBox) || 0,
-                pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
-                size: opt.size,
-                sizes: opt.sizes || [],
-                mosaici: opt.mosaici || [],
-                effects: opt.effects || [],
-                finishes: opt.finishes || [],
-                formats: opt.formats || [],
-                applications: opt.applications || [],
-                supercollections: opt.supercollections || [],
-                description: opt.description,
-                video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
-                thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
-                images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path),
-                images360: (opt.images360Indices || []).map(idx => colorImages360Paths[idx]).filter(path => path)
-            }));
+            productData.colorOptions = parsedOptions.map(opt => {
+                const catObj = (opt.catalogIndex !== undefined && colorCatalogObjects[opt.catalogIndex]) ? colorCatalogObjects[opt.catalogIndex] : null;
+                const catPath = (opt.catalogIndex !== undefined && colorCatalogPaths[opt.catalogIndex]) ? colorCatalogPaths[opt.catalogIndex] : (opt.catalog || "");
+
+                return {
+                    color: opt.color,
+                    sku: opt.sku,
+                    colors: opt.colors || [],
+                    shapes: opt.shapes || [],
+                    shape: opt.shape || "",
+                    name: opt.name,
+                    productName: opt.productName || "",
+                    collectionName: opt.collectionName || "",
+                    catalog: catPath,
+                    catalogData: catObj || undefined,
+                    price: Number(opt.price),
+                    pricePerSqft: Number(opt.pricePerSqft) || 0,
+                    sqftPerBox: Number(opt.sqftPerBox) || 0,
+                    weightPerBox: Number(opt.weightPerBox) || 0,
+                    pricingUnit: opt.pricingUnit ? (opt.pricingUnit.charAt(0).toUpperCase() + opt.pricingUnit.slice(1).toLowerCase()) : "Box",
+                    size: opt.size,
+                    sizes: opt.sizes || [],
+                    mosaici: opt.mosaici || [],
+                    effects: opt.effects || [],
+                    finishes: opt.finishes || [],
+                    formats: opt.formats || [],
+                    applications: opt.applications || [],
+                    supercollections: opt.supercollections || [],
+                    description: opt.description,
+                    video: opt.videoIndex !== undefined ? colorVideoPaths[opt.videoIndex] : undefined,
+                    thumbnail: opt.thumbnailIndex !== undefined ? colorThumbnailPaths[opt.thumbnailIndex] : undefined,
+                    images: (opt.imageIndices || []).map(idx => colorImagePaths[idx]).filter(path => path),
+                    images360: (opt.images360Indices || []).map(idx => colorImages360Paths[idx]).filter(path => path)
+                };
+            });
+
+            const firstCatalogOpt = productData.colorOptions.find(o => o.catalogData?.data || o.catalog);
+            if (firstCatalogOpt) {
+                productData.catalog = firstCatalogOpt.catalog;
+                productData.catalogData = firstCatalogOpt.catalogData;
+            }
 
             console.log("Color options mapped:", productData.colorOptions.map(o => ({ color: o.color, shapes: o.shapes, imgCount: o.images.length, img360Count: o.images360.length })));
         } catch (e) {
@@ -618,12 +647,24 @@ export const updateProduct = async (req, res) => {
           productData.images = productData.existingImages;
       }
     }
-
-    // Handle colorOptionsEdit (new format from EditProduct.jsx)
+       // Handle colorOptionsEdit (new format from EditProduct.jsx)
     if (productData.colorOptionsEdit) {
       try {
         const colorOptionsEdit = JSON.parse(productData.colorOptionsEdit);
         const colorImagePaths = colorImageFiles.map(f => f.path);
+        const colorCatalogObjects = colorCatalogFiles.map(f => {
+          let b64 = "";
+          if (f.buffer) {
+            b64 = f.buffer.toString("base64");
+          } else if (f.path && fs.existsSync(f.path)) {
+            try { b64 = fs.readFileSync(f.path).toString("base64"); } catch (e) {}
+          }
+          return {
+            data: b64,
+            contentType: "application/pdf",
+            filename: f.originalname || "catalog.pdf"
+          };
+        });
         
         productData.colorOptions = colorOptionsEdit.map(opt => {
           const newImages = (opt.newFileIndices || []).map(idx => colorImagePaths[idx]).filter(Boolean);
@@ -632,6 +673,17 @@ export const updateProduct = async (req, res) => {
             finalVideo = colorVideoPaths[opt.newVideoIndex];
           } else if (opt.keepExistingVideo === false) {
             finalVideo = "";
+          }
+
+          let finalCatObj = opt.catalogData || undefined;
+          let finalCatPath = opt.existingCatalog || opt.catalog || "";
+
+          if (opt.newCatalogIndex !== undefined && colorCatalogPaths[opt.newCatalogIndex]) {
+            finalCatPath = colorCatalogPaths[opt.newCatalogIndex];
+            finalCatObj = colorCatalogObjects[opt.newCatalogIndex];
+          } else if (!opt.existingCatalog && !opt.catalog) {
+            finalCatPath = "";
+            finalCatObj = undefined;
           }
 
           return {
@@ -643,7 +695,8 @@ export const updateProduct = async (req, res) => {
             name: opt.name,
             productName: opt.productName || "",
             collectionName: opt.collectionName || "",
-            catalog: (opt.newCatalogIndex !== undefined && colorCatalogPaths[opt.newCatalogIndex]) ? colorCatalogPaths[opt.newCatalogIndex] : (opt.existingCatalog || opt.catalog || ""),
+            catalog: finalCatPath,
+            catalogData: finalCatObj,
             price: Number(opt.price),
             pricePerSqft: Number(opt.pricePerSqft) || 0,
             sqftPerBox: Number(opt.sqftPerBox) || 0,
@@ -663,6 +716,12 @@ export const updateProduct = async (req, res) => {
             images360: [...(opt.existingImages360 || []), ...((opt.newImages360Indices || []).map(idx => colorImages360Paths[idx]).filter(Boolean))]
           };
         });
+
+        const firstCatOpt = productData.colorOptions.find(o => o.catalogData?.data || o.catalog);
+        if (firstCatOpt) {
+          productData.catalog = firstCatOpt.catalog;
+          productData.catalogData = firstCatOpt.catalogData;
+        }
 
       } catch (e) {
         console.error("Error parsing colorOptionsEdit:", e);
@@ -764,5 +823,104 @@ export const deleteProduct = async (req, res) => {
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const downloadCatalog = async (req, res) => {
+  try {
+    const { url, name } = req.query;
+    if (!url) {
+      return res.status(400).json({ message: "Catalog URL is required" });
+    }
+
+    let targetUrl = url;
+    if (!targetUrl.startsWith("http")) {
+      const baseUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      targetUrl = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/${targetUrl.replace(/^\/+/, '')}`;
+    }
+
+    const cleanTitle = (name || "Product").replace(/[^a-zA-Z0-9]/g, "_");
+    const filename = `${cleanTitle}_Catalog.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    const fetchRemote = (reqUrl) => {
+      const client = reqUrl.startsWith("https") ? https : http;
+      client.get(reqUrl, (remoteRes) => {
+        if (remoteRes.statusCode === 301 || remoteRes.statusCode === 302) {
+          const redirectUrl = remoteRes.headers.location;
+          if (redirectUrl) {
+            return fetchRemote(redirectUrl);
+          }
+        }
+        remoteRes.pipe(res);
+      }).on("error", (err) => {
+        console.error("Catalog stream error:", err);
+        if (!res.headersSent) res.status(500).json({ message: "Error downloading catalog file" });
+      });
+    };
+
+    fetchRemote(targetUrl);
+  } catch (error) {
+    console.error("Download Catalog Controller Error:", error);
+    if (!res.headersSent) res.status(500).json({ message: error.message });
+  }
+};
+
+export const downloadCatalogDb = async (req, res) => {
+  try {
+    const { id, optIndex } = req.params;
+    let cleanId = id;
+    if (cleanId.includes("-")) {
+      cleanId = cleanId.split("-")[0];
+    }
+
+    const product = await Product.findById(cleanId).lean();
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    let catData = null;
+    let fallbackUrl = product.catalog || "";
+
+    if (optIndex !== undefined && optIndex !== null && !isNaN(optIndex)) {
+      const idx = parseInt(optIndex, 10);
+      const option = product.colorOptions?.[idx];
+      if (option) {
+        if (option.catalogData && option.catalogData.data) {
+          catData = option.catalogData;
+        } else if (option.catalog) {
+          fallbackUrl = option.catalog;
+        }
+      }
+    }
+
+    if (!catData && product.catalogData && product.catalogData.data) {
+      catData = product.catalogData;
+    }
+
+    if (catData && catData.data) {
+      const fileBuffer = Buffer.from(catData.data, "base64");
+      const cleanTitle = (product.name || "Product").replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = catData.filename || `${cleanTitle}_Catalog.pdf`;
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(fileBuffer);
+    }
+
+    if (fallbackUrl) {
+      if (!fallbackUrl.startsWith("http")) {
+        const baseUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        fallbackUrl = `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/${fallbackUrl.replace(/^\/+/, '')}`;
+      }
+      return res.redirect(fallbackUrl);
+    }
+
+    return res.status(404).json({ message: "No catalog PDF found for this product" });
+  } catch (error) {
+    console.error("Download Catalog DB Error:", error);
+    if (!res.headersSent) res.status(500).json({ message: error.message });
   }
 };
