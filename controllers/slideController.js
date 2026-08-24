@@ -3,7 +3,7 @@ import Slide from "../models/Slide.js";
 // Fetch all slides
 export const getSlides = async (req, res) => {
   try {
-    const slides = await Slide.find().sort({ order: 1, createdAt: -1 });
+    const slides = await Slide.find().sort({ order: 1, createdAt: -1 }).lean();
     res.status(200).json(slides);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch slides: " + error.message });

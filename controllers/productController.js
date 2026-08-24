@@ -273,14 +273,14 @@ export const getProducts = async (req, res) => {
       }
     }
 
-    const products = await Product.find(filter);
+    const products = await Product.find(filter).select("-catalogData.data -colorOptions.catalogData.data").lean();
     
     let formattedProducts = [];
 
     if (req.query.admin === "true") {
       // Original logic for Admin panel (no splitting)
       formattedProducts = products.map(p => {
-        const prod = p.toObject();
+        const prod = { ...p };
         if ((!prod.images || prod.images.length === 0) && prod.colorOptions && prod.colorOptions.length > 0) {
           prod.images = prod.colorOptions[0].images || [];
         }
@@ -304,7 +304,7 @@ export const getProducts = async (req, res) => {
     } else {
       // Split variations for frontend
       products.forEach(p => {
-        const prod = p.toObject();
+        const prod = { ...p };
         console.log("DEBUG: product =", prod.name, "colorOptions count =", prod.colorOptions ? prod.colorOptions.length : 0);
         if (prod.colorOptions && prod.colorOptions.length > 0) {
           prod.colorOptions.forEach((opt, idx) => {
@@ -427,7 +427,7 @@ export const getProductById = async (req, res) => {
     if (prodId.includes("-")) {
       prodId = prodId.split("-")[0];
     }
-    const product = await Product.findById(prodId);
+    const product = await Product.findById(prodId).select("-catalogData.data -colorOptions.catalogData.data").lean();
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -441,14 +441,14 @@ export const getProductById = async (req, res) => {
       const siblings = await Product.find({ 
         series: { $regex: new RegExp(`^${escapedSeriesName}$`, 'i') },
         _id: { $ne: product._id }
-      });
+      }).select("-catalogData.data -colorOptions.catalogData.data").lean();
 
       if (siblings.length > 0) {
-        const mergedProduct = product.toObject();
+        const mergedProduct = { ...product };
         
         // Initialize merged arrays with original product data, marking them with parentId
         const allColorOptions = (product.colorOptions || []).map(opt => ({
-          ...opt.toObject(),
+          ...opt,
           parentId: product._id
         }));
         
@@ -473,7 +473,7 @@ export const getProductById = async (req, res) => {
             sib.colorOptions.forEach(opt => {
               // Avoid duplicates by SKU if needed, but for now just merge
               allColorOptions.push({
-                ...opt.toObject(),
+                ...opt,
                 parentId: sib._id
               });
             });
@@ -488,7 +488,7 @@ export const getProductById = async (req, res) => {
           if (sib.variationColors) {
             sib.variationColors.forEach(vc => {
               if (!allVariationColors.find(existing => existing.name === vc.name)) {
-                allVariationColors.push(vc.toObject());
+                allVariationColors.push({ ...vc });
               }
             });
           }
@@ -543,7 +543,7 @@ export const getProductById = async (req, res) => {
       }
     }
 
-    const mergedProduct = product.toObject();
+    const mergedProduct = { ...product };
     if ((!mergedProduct.images || mergedProduct.images.length === 0) && mergedProduct.colorOptions && mergedProduct.colorOptions.length > 0) {
       mergedProduct.images = mergedProduct.colorOptions[0].images || [];
     }

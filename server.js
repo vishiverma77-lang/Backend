@@ -20,16 +20,30 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:5173", 
+  "http://localhost:5174", 
+  "http://localhost:5175", 
+  "http://localhost:5176", 
+  "https://shopceragresluxe.com", 
+  "https://www.shopceragresluxe.com"
+];
+
 app.use(cors({
-  origin: [
-    "http://localhost:5173", 
-    "http://localhost:5174", 
-    "http://localhost:5175", 
-    "http://localhost:5176", 
-    "https://shopceragresluxe.com", 
-    "https://www.shopceragresluxe.com"
-  ],
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.includes("shopceragresluxe.com") ||
+      origin.includes("localhost")
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }));
 app.use(express.json());
 
@@ -53,6 +67,11 @@ app.use("/api/slides", slideRoutes);
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected successfully"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+// Keep-alive health check route for Render pings
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({ status: "ok", message: "Server is active", timestamp: new Date().toISOString() });
+});
 
 // Test route
 app.get("/", (req, res) => {
